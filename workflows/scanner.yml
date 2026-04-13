@@ -1,1 +1,42 @@
+name: Porsche 996 Scanner
 
+on:
+  schedule:
+    # Täglich um 08:00 Uhr UTC (= 09:00/10:00 Uhr deutsche Zeit)
+    - cron: "0 8 * * *"
+  workflow_dispatch:  # Manueller Start jederzeit möglich
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # State-Datei (bekannte Anzeigen-IDs) aus Cache laden
+      - name: State-Cache laden
+        uses: actions/cache@v4
+        with:
+          path: scanner/last_seen_ids.json
+          key: seen-ids-${{ runner.os }}
+          restore-keys: seen-ids-
+
+      - name: Scanner ausführen
+        env:
+          GMAIL_USER:         ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL:       ${{ secrets.NOTIFY_EMAIL }}
+        run: python scanner/scan.py
+
+      # State-Datei zurück in den Cache schreiben
+      - name: State-Cache speichern
+        uses: actions/cache@v4
+        with:
+          path: scanner/last_seen_ids.json
+          key: seen-ids-${{ runner.os }}-${{ github.run_id }}
