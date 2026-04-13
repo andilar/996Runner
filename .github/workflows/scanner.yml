@@ -2,8 +2,8 @@ name: Porsche 996 Scanner
 
 on:
   schedule:
-    # Täglich um 08:00 Uhr UTC (= 09:00/10:00 Uhr deutsche Zeit)
-    - cron: "0 8 * * *"
+    # Täglich um 17:00 Uhr UTC (= 18:00 Uhr MEZ / 19:00 Uhr MESZ)
+    - cron: "0 17 * * *"
   workflow_dispatch:  # Manueller Start jederzeit möglich
 
 jobs:
