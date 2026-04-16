@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Porsche 996 Kleinanzeigen Scanner
+Porsche 997 Kleinanzeigen Scanner
 Scannt täglich neue Angebote und sendet eine HTML-Zusammenfassung per Gmail.
 """
 
@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 # ─── Konfiguration ───────────────────────────────────────────────────────────
 
 SEARCH_URL = (
-    "https://www.kleinanzeigen.de/s-autos/996/k0c216+autos.shift_s:manuell"
+    "https://www.kleinanzeigen.de/s-autos/997/k0c216+autos.shift_s:manuell"
 )
 
 HEADERS = {
@@ -84,7 +84,7 @@ HIGHLIGHT_GROUPS = [
         "color": "#3C3489",
         "bg": "#EEEDFE",
         "keywords": [
-            "facelift", "996.2", "996 2", "mj2002", "mj 2002",
+            "facelift", "997.2", "997 2", "mj2002", "mj 2002",
             "mj2003", "mj2004", "mj2005",
         ],
     },
@@ -322,11 +322,11 @@ def build_html(new_listings: list[dict], total: int) -> str:
 
     return f"""<!DOCTYPE html>
 <html lang="de">
-<head><meta charset="utf-8"><title>996 Scanner</title></head>
+<head><meta charset="utf-8"><title>997 Scanner</title></head>
 <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f5f5f5;">
 <div style="max-width:700px;margin:24px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
   <div style="background:#1a1a1a;padding:24px 28px;">
-    <h1 style="margin:0;color:#fff;font-size:20px;">🏎 Porsche 996 Scanner</h1>
+    <h1 style="margin:0;color:#fff;font-size:20px;">🏎 Porsche 997 Scanner</h1>
     <p style="margin:6px 0 0;color:#aaa;font-size:13px;">{today} · Schaltgetriebe · Kleinanzeigen.de</p>
   </div>
 
@@ -378,7 +378,7 @@ def build_html(new_listings: list[dict], total: int) -> str:
   </div>
 
   <p style="text-align:center;padding:12px;font-size:11px;color:#bbb;margin:0;">
-    Automatisch generiert von 996-Scanner · GitHub Actions
+    Automatisch generiert von 997-Scanner · GitHub Actions
   </p>
 </div>
 </body>
@@ -416,9 +416,9 @@ def main():
 
     # E-Mail immer senden (auch bei 0 neuen — als Lebenszeichen)
     subject = (
-        f"🏎 996 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"
+        f"🏎 997 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"
         if new else
-        f"🏎 996 Scanner: Keine neuen Angebote – {date.today():%d.%m.%Y}"
+        f"🏎 997 Scanner: Keine neuen Angebote – {date.today():%d.%m.%Y}"
     )
     html = build_html(new, len(listings))
 
