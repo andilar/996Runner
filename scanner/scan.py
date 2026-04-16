@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 # ─── Konfiguration ───────────────────────────────────────────────────────────
 
 SEARCH_URL = (
-    "https://www.kleinanzeigen.de/s-autos/997/k0c216+autos.shift_s:manuell"
+    "https://www.kleinanzeigen.de/s-autos/porsche/pdk/k0c216+autos.marke_s:porsche+autos.model_s:997"
 )
 
 HEADERS = {
