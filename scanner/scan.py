@@ -31,13 +31,14 @@ HEADERS = {
 }
 
 STATE_FILE = "scanner/last_seen_ids.json"
+DEBUG_HTML = "scanner/debug_last_fetch.html"   # wird bei DEBUG=1 geschrieben
 
 GMAIL_USER   = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER)
+DEBUG        = os.environ.get("DEBUG", "0") == "1"
 
-# ─── Keywords die ein Angebot besonders interessant machen ───────────────────
-# Jede Gruppe hat ein Label und eine Farbe für das Badge in der Mail
+# ─── Keywords ────────────────────────────────────────────────────────────────
 
 HIGHLIGHT_GROUPS = [
     {
@@ -49,7 +50,7 @@ HIGHLIGHT_GROUPS = [
             "motor erneuert", "austauschmotor", "rumpfmotor", "kurzmotor",
             "ims getauscht", "ims ersetzt", "ims upgrade", "ims lager",
             "zwischenwelle", "rms getauscht", "rms erneuert",
-            "motoren überholt", "komplett überholt",
+            "motoren überholt", "komplett überholt", "revidiert", "motor"
         ],
     },
     {
@@ -92,36 +93,58 @@ HIGHLIGHT_GROUPS = [
 
 
 def detect_highlights(text: str) -> list[dict]:
-    """Gibt alle zutreffenden Highlight-Gruppen für einen Text zurück."""
     text_lower = text.lower()
-    matches = []
-    for group in HIGHLIGHT_GROUPS:
-        if any(kw in text_lower for kw in group["keywords"]):
-            matches.append(group)
-    return matches
+    return [g for g in HIGHLIGHT_GROUPS if any(kw in text_lower for kw in g["keywords"])]
+
 
 # ─── HTML Parser ─────────────────────────────────────────────────────────────
 
 class ListingParser(HTMLParser):
-    """Extrahiert Angebots-IDs, Titel, Preise und Links aus der Kleinanzeigen-Seite."""
+    """
+    Parst Kleinanzeigen-Suchergebnisse.
+
+    Aktuelles DOM-Layout (Stand 2024/2025):
+      <article data-adid="...">
+        ...
+        <a href="/s-anzeige/..." class="... ellipsis ...">TITEL</a>
+        ...
+        <p class="aditem-main--middle--price-shipping--price">PREIS</p>
+        ...
+        <span class="aditem-main--top--left">ORT · DATUM</span>
+        ...
+        <!-- KM-Stand und Baujahr stehen in eigenen <li>-Tags oder als
+             freitext in der Beschreibung; wir sammeln den gesamten
+             article-Text und extrahieren anschließend per Regex -->
+      </article>
+    """
 
     def __init__(self):
         super().__init__()
-        self.listings = []
-        self._current = {}
-        self._in_article = False
-        self._in_title = False
-        self._in_price = False
-        self._in_location = False
-        self._depth = 0
+        self.listings: list[dict] = []
 
+        # Zustand für das aktuelle article-Element
+        self._cur: dict = {}
+        self._in_article = False
+        self._article_text = ""       # gesamter Rohtext innerhalb des article
+
+        # Welches Feld füllen wir gerade?
+        self._capture_title    = False
+        self._capture_price    = False
+        self._capture_location = False
+
+    # ── Hilfsmethode ──────────────────────────────────────────────────────────
+    def _cls(self, attrs: dict) -> str:
+        return attrs.get("class", "") or ""
+
+    # ── Tag öffnet sich ───────────────────────────────────────────────────────
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        cls   = self._cls(attrs)
 
-        # Anzeigen-Artikel
+        # ── Article-Container beginnt ────────────────────────────────────────
         if tag == "article" and "data-adid" in attrs:
-            self._current = {
-                "id": attrs.get("data-adid", ""),
+            self._cur = {
+                "id": attrs["data-adid"],
                 "title": "",
                 "price": "",
                 "location": "",
@@ -130,120 +153,166 @@ class ListingParser(HTMLParser):
                 "km": "",
                 "year": "",
             }
-            self._in_article = True
+            self._in_article  = True
+            self._article_text = ""
+            return
 
         if not self._in_article:
             return
 
-        if tag == "a" and "class" in attrs and "ellipsis" in attrs.get("class", ""):
+        # ── Titel-Link ───────────────────────────────────────────────────────
+        # Kleinanzeigen nutzt verschiedene Klassen; wir matchen auf den href-
+        # Pfad – das ist stabiler als Klassen-Namen.
+        if tag == "a":
             href = attrs.get("href", "")
-            if href.startswith("/s-anzeige/"):
-                self._current["url"] = "https://www.kleinanzeigen.de" + href
-            self._in_title = True
+            if href.startswith("/s-anzeige/") and not self._cur["url"]:
+                self._cur["url"] = "https://www.kleinanzeigen.de" + href
+                self._capture_title = True
+            return
 
-        if tag == "p" and "class" in attrs:
-            cls = attrs.get("class", "")
-            if "aditem-main--middle--price" in cls:
-                self._in_price = True
-            if "aditem-main--top--left" in cls or "icon-pin" in cls:
-                self._in_location = True
+        # ── Preis ─────────────────────────────────────────────────────────────
+        # Mögliche Klassen (Kleinanzeigen baut das DOM gerne um):
+        #   aditem-main--middle--price-shipping--price
+        #   aditem-main--middle--price
+        if tag == "p" and (
+            "price" in cls.lower()
+        ):
+            self._capture_price = True
+            return
 
+        # ── Ort / Datum ───────────────────────────────────────────────────────
+        # <span class="... aditem-main--top--left ...">ORT · DATUM</span>
+        if tag in ("span", "p") and "aditem-main--top--left" in cls:
+            self._capture_location = True
+            return
+
+    # ── Tag schließt sich ─────────────────────────────────────────────────────
     def handle_endtag(self, tag):
         if tag == "article" and self._in_article:
-            if self._current.get("id"):
-                self.listings.append(self._current.copy())
-            self._current = {}
-            self._in_article = False
-        if tag == "a":
-            self._in_title = False
-        if tag == "p":
-            self._in_price = False
-            self._in_location = False
-
-    def handle_data(self, data):
-        data = data.strip()
-        if not data or not self._in_article:
+            # KM und Baujahr per Regex aus dem gesammelten article-Text ziehen
+            self._extract_km_year()
+            if self._cur.get("id"):
+                self.listings.append(self._cur.copy())
+            self._cur          = {}
+            self._in_article   = False
+            self._article_text = ""
             return
-        if self._in_title and not self._current["title"]:
-            self._current["title"] = data
-        if self._in_price and not self._current["price"]:
-            self._current["price"] = data
-        if self._in_location and not self._current["location"]:
-            self._current["location"] = data
+
+        if tag == "a":
+            self._capture_title = False
+        if tag == "p":
+            self._capture_price    = False
+            self._capture_location = False
+        if tag == "span":
+            self._capture_location = False
+
+    # ── Textinhalt ────────────────────────────────────────────────────────────
+    def handle_data(self, data):
+        if not self._in_article:
+            return
+        stripped = data.strip()
+        if not stripped:
+            return
+
+        # Rohtext aufsammeln (für KM/Jahr-Extraktion)
+        self._article_text += " " + stripped
+
+        if self._capture_title and not self._cur["title"]:
+            self._cur["title"] = stripped
+        if self._capture_price and not self._cur["price"]:
+            # Preiszeilen können "VB" / "k.A." / "12.500 €" enthalten
+            if re.search(r"[\d€]|VB|Preis|k\.A", stripped, re.I):
+                self._cur["price"] = stripped
+        if self._capture_location and not self._cur["location"]:
+            self._cur["location"] = stripped
+
+    # ── Extraktion KM / Baujahr aus article-Rohtext ───────────────────────────
+    def _extract_km_year(self):
+        text = self._article_text
+
+        # KM-Stand: "123.456 km" oder "123456 km"
+        km_m = re.search(r"\b(\d{1,3}[\.\s]?\d{3})\s*km\b", text, re.I)
+        if km_m:
+            self._cur["km"] = km_m.group(0).strip()
+
+        # Baujahr: 4-stellige Zahl im Bereich 1997–2005
+        year_m = re.search(r"\b(199[7-9]|200[0-5])\b", text)
+        if year_m:
+            self._cur["year"] = year_m.group(1)
+
+        # Datum der Anzeige (z.B. "Heute" / "Gestern" / "15.04.2025")
+        date_m = re.search(r"\b(Heute|Gestern|\d{2}\.\d{2}\.\d{4})\b", text, re.I)
+        if date_m:
+            self._cur["date"] = date_m.group(1)
 
 
-def extract_listings_regex(html: str) -> list[dict]:
-    """Fallback: extrahiert Anzeigen per Regex aus dem rohen HTML."""
-    listings = []
-
-    # Finde alle adid-Blöcke
-    adid_blocks = re.finditer(r'data-adid="(\d+)"', html)
-    for match in adid_blocks:
-        adid = match.group(1)
-        # Suche nach URL
-        url_match = re.search(
-            rf'href="(/s-anzeige/[^"]*/{adid}-\d+-\d+)"', html
-        )
-        url = ("https://www.kleinanzeigen.de" + url_match.group(1)) if url_match else ""
-
-        # Titel aus URL ableiten
-        title = ""
-        if url_match:
-            slug = url_match.group(1).split("/")[2] if url_match else ""
-            title = slug.replace("-", " ").title()
-
-        # Preis
-        price_match = re.search(
-            rf'{adid}.{{0,500}}?(\d{{2,3}}\.\d{{3}}\s*€|\d{{3,3}}\s*€|\d{{4,6}}\s*€)',
-            html, re.DOTALL
-        )
-        price = price_match.group(1).strip() if price_match else "k.A."
-
-        listings.append({
-            "id": adid,
-            "title": title or f"Anzeige #{adid}",
-            "price": price,
-            "location": "",
-            "url": url,
-            "date": "",
-            "km": "",
-            "year": "",
-        })
-
-    return listings
-
+# ─── Fetch ────────────────────────────────────────────────────────────────────
 
 def fetch_listings(url: str) -> list[dict]:
     req = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=15) as resp:
         html = resp.read().decode("utf-8", errors="replace")
 
+    if DEBUG:
+        os.makedirs("scanner", exist_ok=True)
+        with open(DEBUG_HTML, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"  [DEBUG] HTML gespeichert: {DEBUG_HTML}")
+
     parser = ListingParser()
     parser.feed(html)
-
     listings = parser.listings
 
-    # Fallback wenn Parser nichts findet
     if not listings:
-        print("HTMLParser lieferte 0 Ergebnisse, versuche Regex-Fallback...")
-        listings = extract_listings_regex(html)
+        print("  HTMLParser lieferte 0 Ergebnisse – versuche Regex-Fallback...")
+        listings = _regex_fallback(html)
 
-    # Kilometerstand und Baujahr aus Titel/Beschreibung extrahieren
-    km_pattern   = re.compile(r"(\d{2,3}[\.\s]?\d{3})\s*km", re.I)
-    year_pattern = re.compile(r"\b(199[8-9]|200[0-9]|201[0-5])\b")
-    for lst in listings:
-        text = f"{lst['title']} {lst.get('desc','')}"
-        m = km_pattern.search(text)
-        if m:
-            lst["km"] = m.group(0)
-        m = year_pattern.search(text)
-        if m:
-            lst["year"] = m.group(1)
+    print(f"  Parser: {len(listings)} Angebote, "
+          f"davon Titel befüllt: {sum(1 for l in listings if l['title'])}, "
+          f"Preis befüllt: {sum(1 for l in listings if l['price'])}, "
+          f"Ort befüllt: {sum(1 for l in listings if l['location'])}")
 
     return listings
 
 
-# ─── State / Neue Angebote ermitteln ─────────────────────────────────────────
+def _regex_fallback(html: str) -> list[dict]:
+    """Notfall-Extraktion via Regex, wenn der HTML-Parser scheitert."""
+    listings = []
+    for m in re.finditer(r'data-adid="(\d+)"', html):
+        adid = m.group(1)
+        url_m = re.search(rf'href="(/s-anzeige/[^"]*{adid}[^"]*)"', html)
+        url   = ("https://www.kleinanzeigen.de" + url_m.group(1)) if url_m else ""
+
+        # Titel aus dem Link-Slug ableiten
+        title = ""
+        if url_m:
+            parts = url_m.group(1).split("/")
+            if len(parts) >= 3:
+                title = parts[2].replace("-", " ").title()
+
+        # Preis im umliegenden Kontext (bis 800 Zeichen nach adid)
+        pos   = m.end()
+        chunk = html[pos:pos+800]
+        p_m   = re.search(r"(\d{1,3}(?:\.\d{3})*)\s*€", chunk)
+        price = (p_m.group(0)) if p_m else "k.A."
+
+        # KM
+        km_m  = re.search(r"\b(\d{1,3}[\.\s]?\d{3})\s*km\b", chunk, re.I)
+        km    = km_m.group(0).strip() if km_m else ""
+
+        # Baujahr
+        yr_m  = re.search(r"\b(199[7-9]|200[0-5])\b", chunk)
+        year  = yr_m.group(1) if yr_m else ""
+
+        listings.append({
+            "id": adid, "title": title or f"Anzeige #{adid}",
+            "price": price, "location": "", "url": url,
+            "date": "", "km": km, "year": year,
+        })
+    return listings
+
+
+# ─── State ───────────────────────────────────────────────────────────────────
 
 def load_seen_ids() -> set:
     if os.path.exists(STATE_FILE):
@@ -253,6 +322,7 @@ def load_seen_ids() -> set:
 
 
 def save_seen_ids(ids: set):
+    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     with open(STATE_FILE, "w") as f:
         json.dump(list(ids), f)
 
@@ -264,42 +334,40 @@ def find_new(listings: list[dict], seen: set) -> list[dict]:
 # ─── E-Mail ───────────────────────────────────────────────────────────────────
 
 def build_html(new_listings: list[dict], total: int) -> str:
-    today = date.today().strftime("%d.%m.%Y")
-    count_new = len(new_listings)
+    today         = date.today().strftime("%d.%m.%Y")
+    count_new     = len(new_listings)
 
-    # Angebote sortieren: highlights zuerst
     def sort_key(l):
         return 0 if detect_highlights(f"{l.get('title','')} {l.get('desc','')}") else 1
 
     sorted_listings = sorted(new_listings, key=sort_key)
-    highlight_count = sum(1 for l in new_listings
-                          if detect_highlights(f"{l.get('title','')} {l.get('desc','')}"))
+    highlight_count = sum(
+        1 for l in new_listings
+        if detect_highlights(f"{l.get('title','')} {l.get('desc','')}")
+    )
 
     rows = ""
     for l in sorted_listings:
-        title  = l["title"] or "–"
-        price  = l["price"] or "k.A."
+        title  = l["title"]    or "–"
+        price  = l["price"]    or "k.A."
         loc    = l["location"] or "–"
-        km     = l["km"] or "–"
-        year   = l["year"] or "–"
-        url    = l["url"] or "#"
+        km     = l["km"]       or "–"
+        year   = l["year"]     or "–"
+        url    = l["url"]      or "#"
 
-        full_text   = f"{title} {l.get('desc', '')}"
-        highlights  = detect_highlights(full_text)
-        is_top      = bool(highlights)
+        full_text  = f"{title} {l.get('desc', '')}"
+        highlights = detect_highlights(full_text)
+        is_top     = bool(highlights)
 
-        # Zeilenhintergrund für Top-Angebote
-        row_bg = "background:#fffbf0;" if is_top else ""
+        row_bg      = "background:#fffbf0;" if is_top else ""
         left_border = "border-left:3px solid #E6A817;" if is_top else "border-left:3px solid transparent;"
 
-        # Badges bauen
-        badges = ""
-        for h in highlights:
-            badges += (
-                f'<span style="display:inline-block;font-size:10px;font-weight:600;'
-                f'padding:2px 7px;border-radius:4px;margin-left:5px;'
-                f'background:{h["bg"]};color:{h["color"]};">{h["label"]}</span>'
-            )
+        badges = "".join(
+            f'<span style="display:inline-block;font-size:10px;font-weight:600;'
+            f'padding:2px 7px;border-radius:4px;margin-left:5px;'
+            f'background:{h["bg"]};color:{h["color"]};">{h["label"]}</span>'
+            for h in highlights
+        )
 
         star = "⭐ " if is_top else ""
 
@@ -345,7 +413,6 @@ def build_html(new_listings: list[dict], total: int) -> str:
     </div>
   </div>
 
-  <!-- Badge-Legende -->
   <div style="padding:12px 28px;background:#fafafa;border-bottom:1px solid #eee;font-size:12px;color:#666;">
     <span style="font-weight:600;margin-right:8px;">Markierungen:</span>
     <span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#E6F1FB;color:#185FA5;margin-right:4px;">Motorrevision</span>
@@ -406,15 +473,13 @@ def main():
     listings = fetch_listings(SEARCH_URL)
     print(f"  {len(listings)} Angebote gefunden")
 
-    seen      = load_seen_ids()
-    new       = find_new(listings, seen)
+    seen = load_seen_ids()
+    new  = find_new(listings, seen)
     print(f"  {len(new)} davon neu")
 
-    # State aktualisieren
     all_ids = seen | {l["id"] for l in listings}
     save_seen_ids(all_ids)
 
-    # E-Mail immer senden (auch bei 0 neuen — als Lebenszeichen)
     subject = (
         f"🏎 996 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"
         if new else
@@ -426,13 +491,14 @@ def main():
         send_email(subject, html)
     else:
         print("GMAIL_USER / GMAIL_APP_PASSWORD nicht gesetzt – E-Mail übersprungen")
-        print("HTML-Vorschau gespeichert: scanner/preview.html")
+        os.makedirs("scanner", exist_ok=True)
         with open("scanner/preview.html", "w") as f:
             f.write(html)
+        print("HTML-Vorschau gespeichert: scanner/preview.html")
 
     print("Fertig.")
 
 
 if __name__ == "__main__":
     main()
-
+        
