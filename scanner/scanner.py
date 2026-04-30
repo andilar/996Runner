@@ -54,7 +54,7 @@ HIGHLIGHT_GROUPS = [
             "motor erneuert", "austauschmotor", "rumpfmotor", "kurzmotor",
             "ims getauscht", "ims ersetzt", "ims upgrade", "ims lager",
             "zwischenwelle", "rms getauscht", "rms erneuert",
-            "motoren überholt", "komplett überholt", "revidiert", "revision"
+            "motoren überholt", "komplett überholt",
         ],
     },
     {
@@ -695,4 +695,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
