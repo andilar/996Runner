@@ -1,42 +1,67 @@
-name: Porsche 996 Scanner
+name: 996 Scanner
 
 on:
   schedule:
-    # Täglich um 17:00 Uhr UTC (= 18:00 Uhr MEZ / 19:00 Uhr MESZ)
-    - cron: "0 17 * * *"
-  workflow_dispatch:  # Manueller Start jederzeit möglich
+    # Täglich 07:00 UTC = 09:00 MESZ / 08:00 MEZ
+    - cron: "0 7 * * *"
+  workflow_dispatch:    # erlaubt manuelles Auslösen über die GitHub-UI
+
+permissions:
+  contents: write       # damit der Bot last_seen_ids.json zurück committen kann
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Repository auschecken
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-      - name: Python einrichten
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
-      # State-Datei (bekannte Anzeigen-IDs) aus Cache laden
-      - name: State-Cache laden
-        uses: actions/cache@v4
-        with:
-          path: scanner/last_seen_ids.json
-          key: seen-ids-${{ runner.os }}
-          restore-keys: seen-ids-
+      - name: Show state before scan
+        run: |
+          echo "─── State VOR dem Scan ───"
+          ls -la scanner/ || true
+          wc -c scanner/last_seen_ids.json 2>/dev/null || echo "Datei existiert nicht"
+          python -c "import json; print('IDs im State:', len(json.load(open('scanner/last_seen_ids.json'))))" \
+            2>/dev/null || echo "Konnte State nicht lesen"
 
-      - name: Scanner ausführen
+      - name: Run scanner
         env:
           GMAIL_USER:         ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL:       ${{ secrets.NOTIFY_EMAIL }}
         run: python scanner/scanner.py
 
-      # State-Datei zurück in den Cache schreiben
-      - name: State-Cache speichern
-        uses: actions/cache@v4
-        with:
-          path: scanner/last_seen_ids.json
-          key: seen-ids-${{ runner.os }}-${{ github.run_id }}
+      - name: Show state after scan
+        run: |
+          echo "─── State NACH dem Scan ───"
+          ls -la scanner/
+          wc -c scanner/last_seen_ids.json
+          python -c "import json; print('IDs im State:', len(json.load(open('scanner/last_seen_ids.json'))))"
+          echo "─── Git-Status ───"
+          git status
+
+      - name: Commit updated state
+        run: |
+          git config user.name  "996-scanner-bot"
+          git config user.email "996-scanner-bot@users.noreply.github.com"
+          git add scanner/last_seen_ids.json
+
+          if git diff --staged --quiet; then
+            echo "Keine Änderungen am State – kein Commit nötig."
+            exit 0
+          fi
+
+          echo "─── Diff (gestaged) ───"
+          git diff --staged --stat
+          git commit -m "chore: update last_seen_ids.json [skip ci]"
+
+          echo "─── Push ───"
+          git push
+          echo "Push erfolgreich."
