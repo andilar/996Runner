@@ -7,7 +7,7 @@ on:
   workflow_dispatch:    # erlaubt manuelles Auslösen über die GitHub-UI
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write       # damit der Bot last_seen_ids.json zurück committen kann
