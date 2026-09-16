@@ -32,6 +32,7 @@ HEADERS = {
 }
 
 STATE_FILE = "scanner/last_seen_ids.json"
+FAVORITES_FILE = "scanner/all_time_favorites.json"
 DEBUG_HTML = "scanner/debug_last_fetch.html"
 
 GMAIL_USER   = os.environ.get("GMAIL_USER", "")
@@ -502,6 +503,29 @@ def find_new(listings: list[dict], seen: set) -> list[dict]:
     return [l for l in listings if l["id"] not in seen]
 
 
+def load_all_time_favorites() -> list[dict]:
+    if os.path.exists(FAVORITES_FILE):
+        with open(FAVORITES_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def update_all_time_favorites(
+    favorites: list[dict], current_listings: list[dict]
+) -> list[dict]:
+    """Merge current findings into the persistent all-time top three."""
+    by_id = {listing["id"]: listing for listing in favorites}
+    by_id.update({listing["id"]: listing for listing in current_listings})
+    ranked = sorted(by_id.values(), key=lambda listing: compute_score(listing)[0], reverse=True)
+    return ranked[:3]
+
+
+def save_all_time_favorites(favorites: list[dict]):
+    os.makedirs(os.path.dirname(FAVORITES_FILE), exist_ok=True)
+    with open(FAVORITES_FILE, "w", encoding="utf-8") as f:
+        json.dump(favorites, f, ensure_ascii=False, indent=2)
+
+
 # ─── E-Mail: HTML bauen ──────────────────────────────────────────────────────
 
 def _top_card(listing: dict, score: float, rank: int) -> str:
@@ -615,46 +639,53 @@ def _compact_row(listing: dict) -> str:
     </tr>"""
 
 
-def build_html(new_listings: list[dict], total: int) -> str:
+def build_html(
+    new_listings: list[dict], all_listings: list[dict], all_time_favorites: list[dict]
+) -> str:
     today     = date.today().strftime("%d.%m.%Y")
     count_new = len(new_listings)
+    total     = len(all_listings)
 
-    scored = [(compute_score(l)[0], l) for l in new_listings]
-    scored.sort(key=lambda t: t[0], reverse=True)
+    scored_new = [(compute_score(l)[0], l) for l in new_listings]
+    scored_new.sort(key=lambda t: t[0], reverse=True)
+    top3_new = scored_new[:3]
+    top3_new_ids = {l["id"] for _, l in top3_new}
+    rest = [(s, l) for s, l in scored_new if l["id"] not in top3_new_ids]
 
-    # Die drei bestbewerteten neuen Funde als Cards, unabhängig vom Mindestscore.
-    top3 = scored[:3]
-    top3_ids = {l["id"] for _, l in top3}
-    rest = [(s, l) for s, l in scored if l["id"] not in top3_ids]
+    scored_favorites = [(compute_score(l)[0], l) for l in all_time_favorites]
+    scored_favorites.sort(key=lambda t: t[0], reverse=True)
 
     highlight_count = sum(
-        1 for _, l in scored
+        1 for _, l in scored_new
         if detect_highlights(f"{l.get('title','')} {l.get('desc','')}")
     )
 
-    if top3:
-        top_cards = "".join(
-            _top_card(l, s, rank=i+1) for i, (s, l) in enumerate(top3)
+    if top3_new:
+        new_top_cards = "".join(
+            _top_card(l, s, rank=i+1) for i, (s, l) in enumerate(top3_new)
         )
-        top_section = f"""
+        new_top_section = f"""
         <div style="padding:20px 28px 8px;">
           <h2 style="margin:0 0 14px;font-size:15px;color:#333;">
-            🏆 Top 3 nach Bewertung
+            🆕 Top 3 der neuen Angebote
             <span style="font-size:11px;color:#999;font-weight:400;margin-left:8px;">
               Motorrevision · Preis · Entfernung zu 38533
             </span>
           </h2>
-          {top_cards}
+          {new_top_cards}
         </div>"""
     else:
-        top_section = ""
+        new_top_section = """
+        <div style="padding:30px 28px;text-align:center;color:#888;">
+          Heute keine neuen Angebote.
+        </div>"""
 
     if rest:
         rows = "".join(_compact_row(l) for _, l in rest)
         rest_section = f"""
         <div style="padding:8px 28px 20px;">
           <h2 style="margin:12px 0 10px;font-size:14px;color:#555;">
-            Weitere Angebote ({len(rest)})
+            Weitere neue Angebote ({len(rest)})
           </h2>
           <table style="width:100%;border-collapse:collapse;">
             <thead>
@@ -669,13 +700,25 @@ def build_html(new_listings: list[dict], total: int) -> str:
             <tbody>{rows}</tbody>
           </table>
         </div>"""
-    elif not top3:
-        rest_section = """
-        <div style="padding:30px 28px;text-align:center;color:#888;">
-          Heute keine neuen Angebote – alles bereits bekannt.
-        </div>"""
     else:
         rest_section = ""
+
+    if scored_favorites:
+        favorite_cards = "".join(
+            _top_card(l, s, rank=i+1) for i, (s, l) in enumerate(scored_favorites[:3])
+        )
+        favorites_section = f"""
+        <div style="padding:20px 28px 8px;border-top:1px solid #eee;">
+          <h2 style="margin:0 0 14px;font-size:15px;color:#333;">
+            🏆 All-Time-Favoriten
+            <span style="font-size:11px;color:#999;font-weight:400;margin-left:8px;">
+              Die 3 besten jemals gefundenen Angebote
+            </span>
+          </h2>
+          {favorite_cards}
+        </div>"""
+    else:
+        favorites_section = ""
 
     return f"""<!DOCTYPE html>
 <html lang="de">
@@ -703,8 +746,9 @@ def build_html(new_listings: list[dict], total: int) -> str:
     </div>
   </div>
 
-  {top_section}
+  {new_top_section}
   {rest_section}
+  {favorites_section}
 
   <div style="padding:16px 28px;background:#fafafa;border-top:1px solid #eee;text-align:center;">
     <a href="{SEARCH_URL}" style="display:inline-block;background:#185FA5;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
@@ -748,12 +792,15 @@ def main():
     all_ids = seen | {l["id"] for l in listings}
     save_seen_ids(all_ids)
 
+    favorites = update_all_time_favorites(load_all_time_favorites(), listings)
+    save_all_time_favorites(favorites)
+
     subject = (
         f"🏎 996 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"
         if new else
         f"🏎 996 Scanner: Keine neuen Angebote – {date.today():%d.%m.%Y}"
     )
-    html = build_html(new, len(listings))
+    html = build_html(new, listings, favorites)
 
     if GMAIL_USER and GMAIL_PASS:
         send_email(subject, html)
@@ -769,4 +816,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

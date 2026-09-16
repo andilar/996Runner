@@ -1,6 +1,27 @@
 import unittest
 
-from scanner.scanner import ListingParser, _validate_listings, build_html
+from scanner.scanner import (
+    ListingParser,
+    _validate_listings,
+    build_html,
+    update_all_time_favorites,
+)
+
+
+def make_listing(ad_id, title, price, date, desc=""):
+    return {
+        "id": ad_id,
+        "title": title,
+        "price": price,
+        "location": "Testort",
+        "url": f"https://example.test/{ad_id}",
+        "date": date,
+        "km": "100.000 km",
+        "year": "2002",
+        "image": "",
+        "desc": desc,
+        "plz": "",
+    }
 
 
 class ListingParserTest(unittest.TestCase):
@@ -57,38 +78,57 @@ class ListingParserTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "State wird nicht aktualisiert"):
             _validate_listings(corrupt)
 
-    def test_email_shows_top_three_by_score_with_online_dates(self):
-        def listing(ad_id, title, price, date, desc=""):
-            return {
-                "id": ad_id,
-                "title": title,
-                "price": price,
-                "location": "Testort",
-                "url": f"https://example.test/{ad_id}",
-                "date": date,
-                "km": "100.000 km",
-                "year": "2002",
-                "image": "",
-                "desc": desc,
-                "plz": "",
-            }
-
+    def test_email_always_shows_current_top_three_with_online_dates(self):
         findings = [
-            listing("4", "Low score", "35.000 €", "04.09.2026"),
-            listing("2", "Second score", "8.000 €", "02.09.2026"),
-            listing("1", "Top score", "35.000 €", "01.09.2026", "Motorrevision"),
-            listing("3", "Third score", "20.000 €", "03.09.2026"),
+            make_listing("4", "Low score", "35.000 €", "04.09.2026"),
+            make_listing("2", "Second score", "8.000 €", "02.09.2026"),
+            make_listing("1", "Top score", "35.000 €", "01.09.2026", "Motorrevision"),
+            make_listing("3", "Third score", "20.000 €", "03.09.2026"),
         ]
 
-        email = build_html(findings, total=4)
+        email = build_html([], findings, findings)
 
-        self.assertIn("🏆 Top 3 nach Bewertung", email)
+        self.assertIn("🏆 All-Time-Favoriten", email)
         self.assertLess(email.index("Top score"), email.index("Second score"))
         self.assertLess(email.index("Second score"), email.index("Third score"))
         self.assertIn("Online seit: 01.09.2026", email)
         self.assertIn("Online seit: 02.09.2026", email)
         self.assertIn("Online seit: 03.09.2026", email)
         self.assertNotIn("Online seit: 04.09.2026", email)
+        self.assertIn("Heute keine neuen Angebote", email)
+
+    def test_email_places_new_top_three_above_all_time_favorites(self):
+        new_findings = [
+            make_listing("n1", "New first", "8.000 €", "Heute"),
+            make_listing("n2", "New second", "20.000 €", "Heute"),
+            make_listing("n3", "New third", "25.000 €", "Heute"),
+            make_listing("n4", "New fourth", "35.000 €", "Heute"),
+        ]
+        favorites = [
+            make_listing("f1", "Favorite first", "8.000 €", "01.08.2026", "Motorrevision"),
+            make_listing("f2", "Favorite second", "20.000 €", "02.08.2026", "Motorrevision"),
+            make_listing("f3", "Favorite third", "35.000 €", "03.08.2026", "Motorrevision"),
+        ]
+
+        email = build_html(new_findings, new_findings, favorites)
+
+        new_heading = email.index("🆕 Top 3 der neuen Angebote")
+        rest_heading = email.index("Weitere neue Angebote (1)")
+        favorites_heading = email.index("🏆 All-Time-Favoriten")
+        self.assertLess(new_heading, rest_heading)
+        self.assertLess(rest_heading, favorites_heading)
+        self.assertLess(email.index("New first"), email.index("New second"))
+        self.assertLess(email.index("New second"), email.index("New third"))
+        self.assertIn("New fourth", email[rest_heading:favorites_heading])
+
+    def test_all_time_favorites_retain_older_high_scores(self):
+        previous = [make_listing("old", "Old favorite", "8.000 €", "01.08.2026", "Motorrevision")]
+        current = [make_listing("new", "New lower score", "35.000 €", "Heute")]
+
+        favorites = update_all_time_favorites(previous, current)
+
+        self.assertEqual(favorites[0]["id"], "old")
+        self.assertEqual({item["id"] for item in favorites}, {"old", "new"})
 
 
 if __name__ == "__main__":

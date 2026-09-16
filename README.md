@@ -1,18 +1,19 @@
 # 996Runner
 
 Täglicher Scanner für Porsche 996 Schaltwagen-Angebote auf Kleinanzeigen.de.
-Sendet eine HTML-Zusammenfassung per Gmail mit Top-3 Cards (Bild + Beschreibung)
-und einer kompakten Tabelle der restlichen neuen Angebote.
+Sendet eine HTML-Zusammenfassung per Gmail mit den drei bestbewerteten neuen
+Angeboten, weiteren Neuzugängen und den drei besten jemals gefundenen Angeboten.
 
 ## Wie es funktioniert
 
 - GitHub Actions führt das Script täglich aus (Standard: 07:00 UTC).
 - Der Scanner ruft die Suche auf und vergleicht mit `scanner/last_seen_ids.json`.
-- Neue Angebote werden bewertet:
+- Alle aktuellen Angebote werden bewertet:
   - **Motorrevision** (+100), **Preis** (+0..50), **Entfernung zu 38533 Vordorf** (+0..30)
   - Plus Boni für Scheckheft, 1. Hand, Facelift, Wenig KM
-- Top 3 erscheinen als große Cards mit Vorschaubild im Mail-Header,
-  der Rest als kompakte Tabelle darunter.
+- Oben erscheinen die Top 3 der neuen Angebote als große Cards mit Online-Datum.
+- Unten stehen die persistent gespeicherten All-Time-Top-3; weitere neue Angebote
+  werden dazwischen als kompakte Tabelle angezeigt.
 
 ## Repo-Struktur
 
@@ -23,7 +24,8 @@ und einer kompakten Tabelle der restlichen neuen Angebote.
 │       └── scan.yml           # GitHub Actions Workflow
 ├── scanner/
 │   ├── scanner.py             # Hauptscript
-│   └── last_seen_ids.json     # State (wird automatisch geschrieben)
+│   ├── last_seen_ids.json     # Bereits gemeldete Anzeigen
+│   └── all_time_favorites.json # Persistente All-Time-Top-3
 ├── .gitignore
 └── README.md
 ```

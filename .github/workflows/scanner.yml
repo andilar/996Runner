@@ -52,7 +52,7 @@ jobs:
         run: |
           git config user.name  "996-scanner-bot"
           git config user.email "996-scanner-bot@users.noreply.github.com"
-          git add scanner/last_seen_ids.json
+          git add scanner/last_seen_ids.json scanner/all_time_favorites.json
 
           if git diff --staged --quiet; then
             echo "Keine Änderungen am State – kein Commit nötig."
