@@ -13,6 +13,7 @@ import urllib.request
 from datetime import datetime, date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import unescape
 from html.parser import HTMLParser
 
 # ─── Konfiguration ───────────────────────────────────────────────────────────
@@ -230,6 +231,9 @@ class ListingParser(HTMLParser):
         self._capture_price    = False
         self._capture_location = False
         self._capture_desc     = False
+        self._capture_json_ld  = False
+        self._in_title_heading = False
+        self._await_location_span = False
 
     @staticmethod
     def _cls(attrs: dict) -> str:
@@ -240,9 +244,11 @@ class ListingParser(HTMLParser):
         cls   = self._cls(attrs)
 
         if tag == "article" and "data-adid" in attrs:
+            href = attrs.get("data-href", "")
             self._cur = {
                 "id": attrs["data-adid"],
-                "title": "", "price": "", "location": "", "url": "",
+                "title": "", "price": "", "location": "",
+                "url": "https://www.kleinanzeigen.de" + href if href.startswith("/") else href,
                 "date": "", "km": "", "year": "", "image": "",
                 "desc": "", "plz": "",
             }
@@ -251,6 +257,24 @@ class ListingParser(HTMLParser):
             return
 
         if not self._in_article:
+            return
+
+        # The current result page exposes reliable title/description/image data
+        # as JSON-LD inside every article. Keep the CSS-based parsing below for
+        # older markup, but prefer this semantic source when it is available.
+        if tag == "script" and attrs.get("type") == "application/ld+json":
+            self._capture_json_ld = True
+            return
+
+        if tag in ("h2", "h3"):
+            self._in_title_heading = True
+
+        if tag == "svg" and attrs.get("data-title") == "locationOutline":
+            self._await_location_span = True
+
+        if tag == "span" and self._await_location_span:
+            self._capture_location = True
+            self._await_location_span = False
             return
 
         # Erstes <img> im article → Vorschaubild
@@ -270,10 +294,14 @@ class ListingParser(HTMLParser):
             href = attrs.get("href", "")
             if href.startswith("/s-anzeige/") and not self._cur["url"]:
                 self._cur["url"] = "https://www.kleinanzeigen.de" + href
+            if href.startswith("/s-anzeige/") and self._in_title_heading:
                 self._capture_title = True
             return
 
-        if tag == "p" and "price" in cls.lower():
+        if tag == "p" and (
+            "price" in cls.lower()
+            or ("text-title3" in cls and "font-strong" in cls and "text-secondary" in cls)
+        ):
             self._capture_price = True
             return
 
@@ -297,6 +325,10 @@ class ListingParser(HTMLParser):
 
         if tag == "a":
             self._capture_title = False
+        if tag in ("h2", "h3"):
+            self._in_title_heading = False
+        if tag == "script":
+            self._capture_json_ld = False
         if tag == "p":
             self._capture_price    = False
             self._capture_location = False
@@ -309,6 +341,17 @@ class ListingParser(HTMLParser):
             return
         stripped = data.strip()
         if not stripped:
+            return
+
+        if self._capture_json_ld:
+            try:
+                metadata = json.loads(stripped)
+            except (TypeError, ValueError):
+                return
+            if metadata.get("@type") == "ImageObject":
+                self._cur["title"] = unescape(metadata.get("title", "")) or self._cur["title"]
+                self._cur["desc"] = unescape(metadata.get("description", "")) or self._cur["desc"]
+                self._cur["image"] = metadata.get("contentUrl", "") or self._cur["image"]
             return
 
         self._article_text += " " + stripped
@@ -325,6 +368,11 @@ class ListingParser(HTMLParser):
 
     def _extract_km_year_plz(self):
         text = self._article_text
+
+        if not self._cur["price"]:
+            price_m = re.search(r"\b\d{1,3}(?:\.\d{3})*\s*€(?:\s*VB)?", text, re.I)
+            if price_m:
+                self._cur["price"] = price_m.group(0).strip()
 
         km_m = re.search(r"\b(\d{1,3}[\.\s]?\d{3})\s*km\b", text, re.I)
         if km_m:
@@ -364,6 +412,8 @@ def fetch_listings(url: str) -> list[dict]:
         print("  HTMLParser lieferte 0 Ergebnisse – Regex-Fallback...")
         listings = _regex_fallback(html)
 
+    _validate_listings(listings)
+
     print(f"  Parser: {len(listings)} Angebote, "
           f"Titel: {sum(1 for l in listings if l['title'])}, "
           f"Preis: {sum(1 for l in listings if l['price'])}, "
@@ -371,6 +421,27 @@ def fetch_listings(url: str) -> list[dict]:
           f"Bild: {sum(1 for l in listings if l['image'])}")
 
     return listings
+
+
+def _validate_listings(listings: list[dict]):
+    """Abort before state is updated when a markup change corrupts parsing."""
+    if not listings:
+        raise RuntimeError("Keine Angebote gefunden; Parser oder Abruf ist vermutlich defekt")
+
+    minimum = max(1, math.ceil(len(listings) / 2))
+    valid_titles = sum(
+        bool(item.get("title")) and not item["title"].strip().isdigit()
+        for item in listings
+    )
+    prices = sum(bool(item.get("price")) for item in listings)
+    urls = sum(bool(item.get("url")) for item in listings)
+
+    if min(valid_titles, prices, urls) < minimum:
+        raise RuntimeError(
+            "Parser lieferte unvollständige Angebote "
+            f"(gültige Titel: {valid_titles}, Preise: {prices}, URLs: {urls}, "
+            f"gesamt: {len(listings)}); State wird nicht aktualisiert"
+        )
 
 
 def _regex_fallback(html: str) -> list[dict]:
