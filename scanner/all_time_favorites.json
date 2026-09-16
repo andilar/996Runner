@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "3511598932",
+    "title": "Porsche 996 C4 Schalter  Motor - und Getrieberevision ",
+    "price": "VB",
+    "location": "35274 Kirchhain",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-c4-schalter-motor-und-getrieberevision-/3511598932-216-4678",
+    "date": "13.09.2026",
+    "km": "217.000 km",
+    "year": "1999",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/68/686fc32e-0105-47e6-975a-a351d68685a9?rule=$_59.AUTO",
+    "desc": "Fahrzeug ist aus 4. Hand,alle Scheckhefteintragungen vorhanden.\nMotorrevision (Stahlbuchsen mit IMS Lager) in 2022.\nMotor hat 37000km gelaufen.Rechnung mit Anbauteilen wie Auspuffanlage, Querlenker, Stoßdämpfer usw. von über 25000 Euro vorhanden.\n...",
+    "plz": "35274",
+    "distance_km": 220
+  },
+  {
+    "id": "3512364329",
+    "title": "Porsche 911 996 Cabrio",
+    "price": "3.690 € VB",
+    "location": "39443 Förderstedt",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-911-996-cabrio/3512364329-216-27022",
+    "date": "14.09.2026",
+    "km": "4.000 km",
+    "year": "1999",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/93/9395c8cb-2fad-4d50-b8a0-b7489ae76186?rule=$_59.AUTO",
+    "desc": "Ist der Porsche 996 doch ein Problemkind ? Oder eine der schönsten Arten den Sommer oben ohne zu genießen …\nDie Eckdaten:\nMotor neu aufgebaut, ohne Stahlbuchsen,\nNeue Kolben , keine aufgearbeiteten,\nNeue Ketten und Spanner,\nNeue Nockenwellenverste...",
+    "plz": "39443",
+    "distance_km": 77
+  },
+  {
+    "id": "3509230026",
+    "title": "Porsche 996 Carrera 4 Cabriolet Carrera",
+    "price": "19.950 €",
+    "location": "21769 Lamstedt",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-carrera-4-cabriolet-carrera/3509230026-216-2712",
+    "date": "11.09.2026",
+    "km": "148.000 km",
+    "year": "2000",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d6/d6e9fcd6-76ee-4caa-b3e0-57eebfb90d5f?rule=$_59.AUTO",
+    "desc": "Porsche 996 Carrera 4 Cabrio – Handschalter, Sonderfarbe, Hardtop\n\n\nErstzulassung: 02/2000\nKilometerstand: 148.653 km\nMotor: 3,4 Liter, 221 kW / 300 PS\nGetriebe: 6-Gang-Handschaltung\nAntrieb: permanenter Allradantrieb\nKraftstoff: Benzin\n\nZum...",
+    "plz": "21769",
+    "distance_km": 93
+  }
+]
