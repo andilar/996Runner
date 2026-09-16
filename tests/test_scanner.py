@@ -1,6 +1,6 @@
 import unittest
 
-from scanner.scanner import ListingParser, _validate_listings
+from scanner.scanner import ListingParser, _validate_listings, build_html
 
 
 class ListingParserTest(unittest.TestCase):
@@ -40,6 +40,7 @@ class ListingParserTest(unittest.TestCase):
         self.assertEqual(listing["plz"], "67551")
         self.assertEqual(listing["year"], "2000")
         self.assertEqual(listing["km"], "99.000 km")
+        self.assertEqual(listing["date"], "Gestern")
         self.assertEqual(listing["desc"], "Motorrevision und lückenloses Scheckheft")
         self.assertEqual(listing["image"], "https://img.example/car.jpg")
         self.assertEqual(
@@ -55,6 +56,39 @@ class ListingParserTest(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "State wird nicht aktualisiert"):
             _validate_listings(corrupt)
+
+    def test_email_shows_top_three_by_score_with_online_dates(self):
+        def listing(ad_id, title, price, date, desc=""):
+            return {
+                "id": ad_id,
+                "title": title,
+                "price": price,
+                "location": "Testort",
+                "url": f"https://example.test/{ad_id}",
+                "date": date,
+                "km": "100.000 km",
+                "year": "2002",
+                "image": "",
+                "desc": desc,
+                "plz": "",
+            }
+
+        findings = [
+            listing("4", "Low score", "35.000 €", "04.09.2026"),
+            listing("2", "Second score", "8.000 €", "02.09.2026"),
+            listing("1", "Top score", "35.000 €", "01.09.2026", "Motorrevision"),
+            listing("3", "Third score", "20.000 €", "03.09.2026"),
+        ]
+
+        email = build_html(findings, total=4)
+
+        self.assertIn("🏆 Top 3 nach Bewertung", email)
+        self.assertLess(email.index("Top score"), email.index("Second score"))
+        self.assertLess(email.index("Second score"), email.index("Third score"))
+        self.assertIn("Online seit: 01.09.2026", email)
+        self.assertIn("Online seit: 02.09.2026", email)
+        self.assertIn("Online seit: 03.09.2026", email)
+        self.assertNotIn("Online seit: 04.09.2026", email)
 
 
 if __name__ == "__main__":

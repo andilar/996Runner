@@ -515,6 +515,7 @@ def _top_card(listing: dict, score: float, rank: int) -> str:
     img   = listing["image"] or ""
     desc  = listing.get("desc", "")
     dist  = listing.get("distance_km")
+    online_since = listing.get("date") or "–"
 
     if len(desc) > 220:
         desc = desc[:220].rsplit(" ", 1)[0] + "…"
@@ -567,6 +568,8 @@ def _top_card(listing: dict, score: float, rank: int) -> str:
           </div>
           <div style="font-size:12px;color:#666;margin-bottom:10px;">
             📍 {loc} <span style="color:#888;">({dist_str} Luftlinie)</span>
+            <span style="color:#aaa;margin:0 6px;">·</span>
+            📅 Online seit: {online_since}
           </div>
           <div style="font-size:12px;color:#555;line-height:1.5;">
             {desc or '<span style="color:#aaa;">(keine Kurzbeschreibung verfügbar)</span>'}
@@ -619,8 +622,8 @@ def build_html(new_listings: list[dict], total: int) -> str:
     scored = [(compute_score(l)[0], l) for l in new_listings]
     scored.sort(key=lambda t: t[0], reverse=True)
 
-    # Top 3 mit Score > 0 als Cards, Rest als Tabelle
-    top3 = [(s, l) for s, l in scored if s > 0][:3]
+    # Die drei bestbewerteten neuen Funde als Cards, unabhängig vom Mindestscore.
+    top3 = scored[:3]
     top3_ids = {l["id"] for _, l in top3}
     rest = [(s, l) for s, l in scored if l["id"] not in top3_ids]
 
@@ -636,7 +639,7 @@ def build_html(new_listings: list[dict], total: int) -> str:
         top_section = f"""
         <div style="padding:20px 28px 8px;">
           <h2 style="margin:0 0 14px;font-size:15px;color:#333;">
-            🏆 Top-Angebote
+            🏆 Top 3 nach Bewertung
             <span style="font-size:11px;color:#999;font-weight:400;margin-left:8px;">
               Motorrevision · Preis · Entfernung zu 38533
             </span>
