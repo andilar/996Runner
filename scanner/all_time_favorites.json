@@ -14,6 +14,20 @@
     "distance_km": 220
   },
   {
+    "id": "3514767559",
+    "title": "Porsche 996 Cabrio Umbau Front 997",
+    "price": "25.000 € VB",
+    "location": "94253 Bischofsmais",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-cabrio-umbau-front-997/3514767559-216-6001",
+    "date": "Gestern",
+    "km": "216.000 km",
+    "year": "2001",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ed/ede66e73-70aa-45fc-968c-36983539b347?rule=$_59.AUTO",
+    "desc": "Sehr gepflegt umgebaut auf 997 Front die Originalen Teile sollten vorhanden sein .\nOriginal Austauschmotor von Porsche vor vielen Jahren .\nAuto läuft sehr gut ist sehr gepflegt .\nBei Fragen einfach schreiben Hardtop wäre auch dabei .Sportauspuff\n",
+    "plz": "94253",
+    "distance_km": 431
+  },
+  {
     "id": "3512364329",
     "title": "Porsche 911 996 Cabrio",
     "price": "3.690 € VB",
@@ -26,19 +40,5 @@
     "desc": "Ist der Porsche 996 doch ein Problemkind ? Oder eine der schönsten Arten den Sommer oben ohne zu genießen …\nDie Eckdaten:\nMotor neu aufgebaut, ohne Stahlbuchsen,\nNeue Kolben , keine aufgearbeiteten,\nNeue Ketten und Spanner,\nNeue Nockenwellenverste...",
     "plz": "39443",
     "distance_km": 77
-  },
-  {
-    "id": "3509230026",
-    "title": "Porsche 996 Carrera 4 Cabriolet Carrera",
-    "price": "19.950 €",
-    "location": "21769 Lamstedt",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-carrera-4-cabriolet-carrera/3509230026-216-2712",
-    "date": "11.09.2026",
-    "km": "148.000 km",
-    "year": "2000",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d6/d6e9fcd6-76ee-4caa-b3e0-57eebfb90d5f?rule=$_59.AUTO",
-    "desc": "Porsche 996 Carrera 4 Cabrio – Handschalter, Sonderfarbe, Hardtop\n\n\nErstzulassung: 02/2000\nKilometerstand: 148.653 km\nMotor: 3,4 Liter, 221 kW / 300 PS\nGetriebe: 6-Gang-Handschaltung\nAntrieb: permanenter Allradantrieb\nKraftstoff: Benzin\n\nZum...",
-    "plz": "21769",
-    "distance_km": 93
   }
 ]
