@@ -5,6 +5,11 @@ on:
     # Täglich 07:00 UTC = 09:00 MESZ / 08:00 MEZ
     - cron: "0 7 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/scanner.yml"
 
 permissions:
   contents: write
@@ -17,6 +22,7 @@ concurrency:
 
 jobs:
   scan:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -77,6 +83,19 @@ jobs:
           git push
           echo "Push erfolgreich."
 
+  deploy-pages:
+    needs: scan
+    if: always() && (needs.scan.result == 'success' || needs.scan.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout latest dashboard
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
@@ -87,13 +106,6 @@ jobs:
         with:
           path: docs
 
-  deploy-pages:
-    needs: scan
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy dashboard to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
