@@ -13,7 +13,7 @@ den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
 - GitHub Actions führt das Script täglich aus (Standard: 07:00 UTC).
 - Der Scanner ruft die Suche auf und vergleicht mit `scanner/last_seen_ids.json`.
 - Alle aktuellen Angebote werden bewertet:
-  - **Motorrevision** (+100), **Preis** (+0..50), **Entfernung zu 38533 Vordorf** (+0..30)
+  - **Motorrevision** (+100), **Preis** (+0..50), **Entfernung zu XXX Ort** (+0..30)
   - Plus Boni für Scheckheft, 1. Hand, Facelift, Wenig KM
 - Oben erscheinen die Top 3 der neuen Angebote als große Cards mit Online-Datum.
 - Unten stehen die persistent gespeicherten All-Time-Top-3; weitere neue Angebote

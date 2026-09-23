@@ -1,5 +1,33 @@
 [
   {
+    "id": "3479196330",
+    "title": "Porsche 996 Millenium Edition",
+    "price": "VB",
+    "location": "20259 Hamburg Eimsbüttel (Stadtteil)",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-millenium-edition/3479196330-216-9427",
+    "date": "08.08.2026",
+    "km": "136.000km",
+    "year": "2000",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/23/235dd87c-2ac1-4265-ac0d-380fa0265d49?rule=$_59.AUTO",
+    "desc": "Porsche 996 Millenium Edition\nNR. 480 von 911 limitierten Stück\n136.000km EZ: 01/2000 300PS\n3 Vorbesitzer, Service Neu, Motor komplett überholt, Serviceheft und umfangreiche Historie",
+    "plz": "20259",
+    "distance_km": 132
+  },
+  {
+    "id": "3501111548",
+    "title": "Porsche 911/ 996  Carrera 4  Cabrio  Handschalter",
+    "price": "VB",
+    "location": "48691 Vreden",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-911-996-carrera-4-cabrio-handschalter/3501111548-216-1345",
+    "date": "01.09.2026",
+    "km": "160000 km",
+    "year": "2000",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/68/6830fb58-c4d6-4c47-a6f5-6f7fc2757dac?rule=$_59.AUTO",
+    "desc": "Hallo, der 996 ist bis 2020 Scheckheftgepflegt ( 160000 km) da habe ich ihn gekauft und ab da alles selber gemacht. Wartung sowieso, dann Dichtung Zwischenwelle und den Elring mit Kupplung erneuert, Spurplatten 5mm und ein Edelstahl Sportauspuff v...",
+    "plz": "48691",
+    "distance_km": 209
+  },
+  {
     "id": "3511598932",
     "title": "Porsche 996 C4 Schalter  Motor - und Getrieberevision ",
     "price": "VB",
@@ -12,33 +40,5 @@
     "desc": "Fahrzeug ist aus 4. Hand,alle Scheckhefteintragungen vorhanden.\nMotorrevision (Stahlbuchsen mit IMS Lager) in 2022.\nMotor hat 37000km gelaufen.Rechnung mit Anbauteilen wie Auspuffanlage, Querlenker, Stoßdämpfer usw. von über 25000 Euro vorhanden.\n...",
     "plz": "35274",
     "distance_km": 220
-  },
-  {
-    "id": "3514767559",
-    "title": "Porsche 996 Cabrio Umbau Front 997",
-    "price": "25.000 € VB",
-    "location": "94253 Bischofsmais",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-cabrio-umbau-front-997/3514767559-216-6001",
-    "date": "16.09.2026",
-    "km": "216.000 km",
-    "year": "2001",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ed/ede66e73-70aa-45fc-968c-36983539b347?rule=$_59.AUTO",
-    "desc": "Sehr gepflegt umgebaut auf 997 Front die Originalen Teile sollten vorhanden sein .\nOriginal Austauschmotor von Porsche vor vielen Jahren .\nAuto läuft sehr gut ist sehr gepflegt .\nBei Fragen einfach schreiben Hardtop wäre auch dabei .Sportauspuff\n",
-    "plz": "94253",
-    "distance_km": 431
-  },
-  {
-    "id": "3512364329",
-    "title": "Porsche 911 996 Cabrio",
-    "price": "3.690 € VB",
-    "location": "39443 Förderstedt",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-911-996-cabrio/3512364329-216-27022",
-    "date": "14.09.2026",
-    "km": "4.000 km",
-    "year": "1999",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/93/9395c8cb-2fad-4d50-b8a0-b7489ae76186?rule=$_59.AUTO",
-    "desc": "Ist der Porsche 996 doch ein Problemkind ? Oder eine der schönsten Arten den Sommer oben ohne zu genießen …\nDie Eckdaten:\nMotor neu aufgebaut, ohne Stahlbuchsen,\nNeue Kolben , keine aufgearbeiteten,\nNeue Ketten und Spanner,\nNeue Nockenwellenverste...",
-    "plz": "39443",
-    "distance_km": 77
   }
 ]
