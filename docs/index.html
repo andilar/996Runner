@@ -4,105 +4,133 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Historische Angebotspreise und Marktbestand des Porsche 996 auf Kleinanzeigen.de">
-  <title>Porsche 996 Marktbeobachtung</title>
+  <title>Porsche 996 // Market Intelligence</title>
   <style>
-    :root { color-scheme: light dark; --bg:#f5f3ee; --surface:#fff; --ink:#181817; --muted:#686760; --line:#d9d6cd; --accent:#9b1c1c; --accent-soft:#f3dddd; --grid:#dedbd3; }
-    @media (prefers-color-scheme:dark) { :root { --bg:#171716; --surface:#222220; --ink:#f4f1e9; --muted:#aaa79e; --line:#3c3a35; --accent:#ef6b6b; --accent-soft:#4a2424; --grid:#3a3833; } }
+    :root { color-scheme:dark; --void:#030405; --panel:#07090a; --ink:#e8e7df; --muted:#777b7b; --dim:#383d3e; --line:#24292a; --red:#ef302f; --red-dim:#641b1c; --amber:#f3a712; --amber-dim:#674b13; --cyan:#5fb9c2; --white:#f2f0e8; }
     * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif; }
-    main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:48px 0 64px; }
-    header { display:flex; justify-content:space-between; align-items:end; gap:24px; margin-bottom:32px; }
-    h1 { margin:0; font-family:Georgia,serif; font-size:clamp(2rem,5vw,4rem); font-weight:400; letter-spacing:-.04em; }
-    h2 { margin:0 0 14px; font-size:1rem; font-weight:650; }
-    .eyebrow { color:var(--accent); font-size:.75rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; margin-bottom:8px; }
-    .subtitle,.updated,.empty { color:var(--muted); }
-    .updated { font-size:.8rem; white-space:nowrap; }
-    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
-    .metric { background:var(--surface); border:1px solid var(--line); padding:18px; min-width:0; }
-    .metric span { display:block; color:var(--muted); font-size:.75rem; margin-bottom:8px; }
-    .metric strong { display:block; font-family:Georgia,serif; font-size:clamp(1.45rem,3vw,2.15rem); font-weight:400; }
-    .metric small { color:var(--muted); font-size:.72rem; }
-    .charts { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:28px; }
-    section { background:var(--surface); border:1px solid var(--line); padding:20px; }
-    svg { display:block; width:100%; height:280px; overflow:visible; }
-    .axis { fill:var(--muted); font-size:11px; }
-    .grid { stroke:var(--grid); stroke-width:1; }
-    .series { fill:none; stroke:var(--accent); stroke-width:2.5; }
-    .area { fill:var(--accent-soft); opacity:.65; }
-    .point { fill:var(--surface); stroke:var(--accent); stroke-width:2; }
-    .table-wrap { overflow-x:auto; }
-    table { width:100%; border-collapse:collapse; font-size:.86rem; }
-    th,td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; }
-    th { color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; }
+    html { background:var(--void); }
+    body { margin:0; color:var(--ink); font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; background:radial-gradient(circle at 50% 42%,rgba(111,32,19,.12),transparent 37%),radial-gradient(circle,rgba(255,255,255,.11) 0 1px,transparent 1.2px) 0 0/22px 22px,var(--void); min-height:100vh; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.23; background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px); }
+    main { width:min(1380px,calc(100% - 40px)); margin:auto; padding:24px 0 50px; }
+    .system-bar { display:flex; align-items:center; justify-content:space-between; gap:20px; min-height:30px; border-top:1px solid var(--dim); border-bottom:1px solid var(--line); color:var(--muted); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+    .system-bar b { color:var(--cyan); font-weight:500; }
+    .system-bar .live { color:var(--red); }
+    .system-bar .live::before { content:""; display:inline-block; width:5px; height:5px; margin-right:7px; background:var(--red); box-shadow:0 0 8px var(--red); }
+    header { display:grid; grid-template-columns:1fr auto; align-items:end; gap:28px; padding:34px 0 25px; border-bottom:1px solid var(--dim); position:relative; }
+    header::after { content:""; position:absolute; left:0; bottom:-1px; width:18%; height:1px; background:var(--red); box-shadow:0 0 8px var(--red); }
+    h1 { margin:0; font-size:clamp(2.1rem,5vw,5.1rem); line-height:.88; font-weight:400; letter-spacing:-.075em; text-transform:uppercase; }
+    h1 em { color:transparent; -webkit-text-stroke:1px var(--red); font-style:normal; }
+    .eyebrow { color:var(--amber); font-size:9px; letter-spacing:.25em; text-transform:uppercase; margin-bottom:13px; }
+    .subtitle { color:var(--muted); margin-top:16px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+    .updated { text-align:right; color:var(--muted); font-size:9px; line-height:1.8; letter-spacing:.1em; text-transform:uppercase; }
+    .updated::before { content:"SYS.TIME // "; color:var(--red); }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--dim); }
+    .metric { min-width:0; padding:18px 20px 17px; border-right:1px solid var(--line); position:relative; background:linear-gradient(180deg,rgba(255,255,255,.018),transparent); }
+    .metric:last-child { border-right:0; }
+    .metric::before,.panel::before,.changes-panel::before { content:""; position:absolute; top:6px; left:6px; width:8px; height:8px; border-left:1px solid var(--red); border-top:1px solid var(--red); }
+    .metric span { display:block; color:var(--muted); font-size:8px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
+    .metric strong { display:block; color:var(--white); font-size:clamp(1.25rem,2.7vw,2.35rem); line-height:1; font-weight:400; letter-spacing:-.06em; font-variant-numeric:tabular-nums; }
+    .metric small { display:block; color:var(--amber); font-size:8px; letter-spacing:.05em; margin-top:9px; text-transform:uppercase; }
+    .telemetry { display:grid; grid-template-columns:minmax(0,2fr) minmax(280px,1fr); gap:14px; padding:14px 0; }
+    .panel,.changes-panel { position:relative; border:1px solid var(--line); background:rgba(4,6,7,.78); padding:16px; overflow:hidden; }
+    .panel::after,.changes-panel::after { content:""; position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-right:1px solid var(--amber); border-bottom:1px solid var(--amber); }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding-bottom:11px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; color:var(--ink); font-size:9px; font-weight:500; letter-spacing:.13em; text-transform:uppercase; }
+    .channel { color:var(--red); font-size:8px; letter-spacing:.1em; }
+    .chart-wrap { position:relative; }
+    .chart-wrap::before,.chart-wrap::after { content:""; position:absolute; pointer-events:none; background:var(--line); opacity:.55; }
+    .chart-wrap::before { width:1px; top:10px; bottom:20px; left:50%; }
+    .chart-wrap::after { height:1px; left:55px; right:10px; top:50%; }
+    svg { display:block; width:100%; height:330px; overflow:visible; }
+    .axis { fill:var(--muted); font-size:9px; letter-spacing:.04em; }
+    .grid { stroke:var(--line); stroke-width:1; stroke-dasharray:2 5; }
+    .series { fill:none; stroke:var(--amber); stroke-width:1.5; filter:drop-shadow(0 0 3px rgba(243,167,18,.35)); }
+    .inventory-series { stroke:var(--cyan); filter:drop-shadow(0 0 3px rgba(95,185,194,.35)); }
+    .area { fill:var(--amber); opacity:.07; }
+    .inventory-area { fill:var(--cyan); }
+    .point { fill:var(--void); stroke:var(--red); stroke-width:1.5; }
+    .tick-mark { stroke:var(--amber-dim); stroke-width:1; }
+    .empty { color:var(--muted); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:44px 8px; }
+    .changes-panel { margin-top:0; }
+    .table-wrap { overflow-x:auto; margin-top:8px; }
+    table { width:100%; border-collapse:collapse; font-size:10px; }
+    th,td { padding:11px 9px; border-bottom:1px solid var(--line); text-align:left; }
+    th { color:var(--amber); font-size:8px; font-weight:400; text-transform:uppercase; letter-spacing:.12em; }
+    td { color:#b9bbb7; }
+    tr:hover td { background:rgba(239,48,47,.045); color:var(--white); }
     td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-    a { color:var(--accent); }
-    footer { margin-top:20px; color:var(--muted); font-size:.75rem; line-height:1.5; }
-    @media(max-width:760px) { header { align-items:start; flex-direction:column; } .metrics { grid-template-columns:repeat(2,1fr); } .charts { grid-template-columns:1fr; } main { padding-top:28px; } }
-    @media(max-width:420px) { .metrics { grid-template-columns:1fr; } }
+    a { color:var(--white); text-decoration:none; border-bottom:1px solid var(--red-dim); }
+    a:hover { color:var(--red); border-color:var(--red); }
+    footer { display:grid; grid-template-columns:1fr auto; gap:20px; margin-top:18px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:8px; line-height:1.65; letter-spacing:.04em; text-transform:uppercase; }
+    footer strong { color:var(--amber); font-weight:400; white-space:nowrap; }
+    @media(max-width:760px) { main { width:min(100% - 22px,1380px); padding-top:12px; } header { grid-template-columns:1fr; } .updated { text-align:left; } .metrics { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2) { border-right:0; } .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); } .telemetry { grid-template-columns:1fr; } svg { height:270px; } footer { grid-template-columns:1fr; } }
+    @media(max-width:420px) { .system-bar span:nth-child(2) { display:none; } .metrics { grid-template-columns:1fr; } .metric { border-right:0; border-bottom:1px solid var(--line); } }
   </style>
 </head>
 <body>
 <main>
+  <div class="system-bar"><span class="live">Market feed active</span><span>Region // DE · Transmission // Manual</span><b>Model // 996</b></div>
   <header>
-    <div><div class="eyebrow">Kleinanzeigen Marktmonitor</div><h1>Porsche 996</h1><div class="subtitle">Angebotspreise und Marktbewegung im Zeitverlauf</div></div>
+    <div><div class="eyebrow">Porsche market intelligence</div><h1>996 <em>Telemetry</em></h1><div class="subtitle">Historische Angebotspreise · Bestand · Marktbewegung</div></div>
     <div class="updated" id="updated">Noch keine Scans</div>
   </header>
   <div class="metrics" aria-label="Aktuelle Marktkennzahlen">
-    <div class="metric"><span>Medianpreis</span><strong id="median">–</strong><small id="direction">Noch kein Vergleich</small></div>
-    <div class="metric"><span>Online beobachtet</span><strong id="inventory">–</strong><small>Fahrzeuge im letzten Scan</small></div>
-    <div class="metric"><span>Neu / entfernt</span><strong id="movement">–</strong><small>Seit dem vorherigen Scan</small></div>
-    <div class="metric"><span>Preisspanne</span><strong id="range">–</strong><small id="priced">Angebote mit Preis</small></div>
+    <div class="metric"><span>PRC.MED // Medianpreis</span><strong id="median">–</strong><small id="direction">Noch kein Vergleich</small></div>
+    <div class="metric"><span>INV.ACT // Online beobachtet</span><strong id="inventory">–</strong><small>Fahrzeuge im letzten Scan</small></div>
+    <div class="metric"><span>FLOW.IO // Neu / entfernt</span><strong id="movement">–</strong><small>Seit vorherigem Scan</small></div>
+    <div class="metric"><span>PRC.RNG // Preisspanne</span><strong id="range">–</strong><small id="priced">Angebote mit Preis</small></div>
   </div>
-  <div class="charts">
-    <section><h2>Medianer Angebotspreis</h2><svg id="price-chart" role="img" aria-label="Medianer Angebotspreis pro Scan"></svg></section>
-    <section><h2>Online-Angebote</h2><svg id="inventory-chart" role="img" aria-label="Anzahl beobachteter Angebote pro Scan"></svg></section>
+  <div class="telemetry">
+    <section class="panel"><div class="panel-head"><h2>Medianer Angebotspreis</h2><span class="channel">CH.01 // EUR</span></div><div class="chart-wrap"><svg id="price-chart" role="img" aria-label="Medianer Angebotspreis pro Scan"></svg></div></section>
+    <section class="panel"><div class="panel-head"><h2>Online-Angebote</h2><span class="channel">CH.02 // COUNT</span></div><div class="chart-wrap"><svg id="inventory-chart" role="img" aria-label="Anzahl beobachteter Angebote pro Scan"></svg></div></section>
   </div>
-  <section>
-    <h2>Letzte Preisänderungen</h2>
-    <div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Fahrzeug</th><th class="num">Vorher</th><th class="num">Aktuell</th><th class="num">Änderung</th></tr></thead><tbody id="changes"></tbody></table></div>
-    <p class="empty" id="no-changes">Noch keine Preisänderungen erfasst.</p>
+  <section class="changes-panel">
+    <div class="panel-head"><h2>Letzte Preisänderungen</h2><span class="channel">EVENT.LOG // 050</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Fahrzeug</th><th class="num">Vorher</th><th class="num">Aktuell</th><th class="num">Delta</th></tr></thead><tbody id="changes"></tbody></table></div>
+    <p class="empty" id="no-changes">Keine Preisänderungen im Datensatz.</p>
   </section>
-  <footer>Die Auswertung basiert auf öffentlich sichtbaren Angebotspreisen der konfigurierten Kleinanzeigen-Suche. Angebotspreise sind keine Verkaufspreise. Dubletten, fehlerhafte Anzeigen und Änderungen am Suchbestand können die Statistik beeinflussen.</footer>
+  <footer><span>Basis: öffentlich sichtbare Angebotspreise der konfigurierten Kleinanzeigen-Suche. Angebotspreise sind keine Verkaufspreise. Dubletten, fehlerhafte Anzeigen und Bestandsänderungen können die Statistik beeinflussen.</span><strong>996.RUNNER // MARKET SYS</strong></footer>
 </main>
 <script id="market-data" type="application/json">{"scans": [], "price_changes": []}</script>
 <script>
-const data=JSON.parse(document.getElementById('market-data').textContent), scans=data.scans;
+const data=JSON.parse(document.getElementById('market-data').textContent),scans=data.scans;
 const euro=v=>v==null?'–':new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v);
 const when=v=>new Intl.DateTimeFormat('de-DE',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
 if(scans.length){
-  const latest=scans.at(-1), previous=scans.at(-2);
-  document.getElementById('updated').textContent='Stand '+when(latest.scanned_at);
+  const latest=scans.at(-1),previous=scans.at(-2);
+  document.getElementById('updated').textContent=when(latest.scanned_at);
   document.getElementById('median').textContent=euro(latest.median_price_eur);
   document.getElementById('inventory').textContent=latest.listing_count;
   document.getElementById('movement').textContent=`+${latest.new_count} / −${latest.removed_count}`;
   document.getElementById('range').textContent=`${euro(latest.minimum_price_eur)} – ${euro(latest.maximum_price_eur)}`;
   document.getElementById('priced').textContent=`${latest.priced_count} Angebote mit Preis`;
-  if(previous?.median_price_eur!=null && latest.median_price_eur!=null){
-    const delta=latest.median_price_eur-previous.median_price_eur, pct=previous.median_price_eur?delta/previous.median_price_eur*100:0;
-    document.getElementById('direction').textContent=`${delta>0?'↑':delta<0?'↓':'→'} ${Math.abs(pct).toLocaleString('de-DE',{maximumFractionDigits:1})}% zum vorherigen Scan`;
+  if(previous?.median_price_eur!=null&&latest.median_price_eur!=null){
+    const delta=latest.median_price_eur-previous.median_price_eur,pct=previous.median_price_eur?delta/previous.median_price_eur*100:0,direction=document.getElementById('direction');
+    direction.textContent=`${delta>0?'▲':delta<0?'▼':'◆'} ${Math.abs(pct).toLocaleString('de-DE',{maximumFractionDigits:1})}% // PREV.SCAN`;
+    direction.style.color=delta>0?'var(--red)':delta<0?'var(--cyan)':'var(--muted)';
   }
 }
-function chart(id,key,format){
-  const svg=document.getElementById(id), values=scans.filter(d=>d[key]!=null);
-  if(!values.length){svg.outerHTML='<p class="empty">Die Zeitreihe beginnt mit dem nächsten erfolgreichen Scan.</p>';return;}
-  const W=700,H=280,m={t:12,r:12,b:34,l:64}, nums=values.map(d=>+d[key]), lo=Math.min(...nums),hi=Math.max(...nums), pad=Math.max((hi-lo)*.15,key==='listing_count'?2:1000), ymin=Math.max(0,lo-pad),ymax=hi+pad;
-  const x=i=>m.l+(values.length===1?.5:i/(values.length-1))*(W-m.l-m.r), y=v=>m.t+(ymax-v)/(ymax-ymin||1)*(H-m.t-m.b);
-  const ticks=[0,.25,.5,.75,1];
-  let html=ticks.map(t=>{const yy=m.t+t*(H-m.t-m.b),v=ymax-t*(ymax-ymin);return `<line class="grid" x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}"/><text class="axis" x="${m.l-8}" y="${yy+4}" text-anchor="end">${format(v)}</text>`}).join('');
-  const pts=values.map((d,i)=>`${x(i)},${y(d[key])}`).join(' '), base=H-m.b;
-  html+=`<polygon class="area" points="${m.l},${base} ${pts} ${x(values.length-1)},${base}"/><polyline class="series" points="${pts}"/>`;
+function chart(id,key,format,kind){
+  const svg=document.getElementById(id),values=scans.filter(d=>d[key]!=null);
+  if(!values.length){svg.outerHTML='<p class="empty">Zeitreihe startet mit dem nächsten erfolgreichen Scan.</p>';return;}
+  const W=700,H=330,m={t:20,r:14,b:38,l:68},nums=values.map(d=>+d[key]),lo=Math.min(...nums),hi=Math.max(...nums),pad=Math.max((hi-lo)*.15,key==='listing_count'?2:1000),ymin=Math.max(0,lo-pad),ymax=hi+pad;
+  const x=i=>m.l+(values.length===1?.5:i/(values.length-1))*(W-m.l-m.r),y=v=>m.t+(ymax-v)/(ymax-ymin||1)*(H-m.t-m.b),ticks=[0,.2,.4,.6,.8,1];
+  let html=ticks.map(t=>{const yy=m.t+t*(H-m.t-m.b),v=ymax-t*(ymax-ymin);return `<line class="grid" x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}"/><text class="axis" x="${m.l-9}" y="${yy+3}" text-anchor="end">${format(v)}</text>`}).join('');
+  for(let i=0;i<25;i++){const xx=m.l+i/24*(W-m.l-m.r);html+=`<line class="tick-mark" x1="${xx}" y1="${H-m.b}" x2="${xx}" y2="${H-m.b+5}"/>`;}
+  const pts=values.map((d,i)=>`${x(i)},${y(d[key])}`).join(' '),base=H-m.b,extra=kind==='inventory'?' inventory-series':'',areaExtra=kind==='inventory'?' inventory-area':'';
+  html+=`<polygon class="area${areaExtra}" points="${m.l},${base} ${pts} ${x(values.length-1)},${base}"/><polyline class="series${extra}" points="${pts}"/>`;
   html+=values.map((d,i)=>`<circle class="point" cx="${x(i)}" cy="${y(d[key])}" r="3"><title>${when(d.scanned_at)}: ${format(d[key])}</title></circle>`).join('');
   const labels=[0,Math.floor((values.length-1)/2),values.length-1].filter((v,i,a)=>a.indexOf(v)===i);
-  html+=labels.map(i=>`<text class="axis" x="${x(i)}" y="${H-10}" text-anchor="${i===0?'start':i===values.length-1?'end':'middle'}">${new Date(values[i].scanned_at).toLocaleDateString('de-DE')}</text>`).join('');
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML=html;
+  html+=labels.map(i=>`<text class="axis" x="${x(i)}" y="${H-9}" text-anchor="${i===0?'start':i===values.length-1?'end':'middle'}">${new Date(values[i].scanned_at).toLocaleDateString('de-DE')}</text>`).join('');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=html;
 }
-chart('price-chart','median_price_eur',v=>`${Math.round(v/1000)} T€`);
-chart('inventory-chart','listing_count',v=>Math.round(v));
+chart('price-chart','median_price_eur',v=>`${Math.round(v/1000)} T€`,'price');
+chart('inventory-chart','listing_count',v=>Math.round(v),'inventory');
 const tbody=document.getElementById('changes');
 for(const c of data.price_changes){const delta=c.current_price-c.previous_price,tr=document.createElement('tr');
   const date=document.createElement('td');date.textContent=when(c.scanned_at);tr.append(date);
   const car=document.createElement('td'),a=document.createElement('a');a.href=c.url;a.textContent=c.title;a.rel='noopener';car.append(a);tr.append(car);
-  for(const value of [euro(c.previous_price),euro(c.current_price),(delta>0?'+':'')+euro(delta)]){const td=document.createElement('td');td.className='num';td.textContent=value;tr.append(td);} tbody.append(tr);
+  for(const value of [euro(c.previous_price),euro(c.current_price),(delta>0?'+':'')+euro(delta)]){const td=document.createElement('td');td.className='num';td.textContent=value;tr.append(td);}tbody.append(tr);
 }
 if(data.price_changes.length)document.getElementById('no-changes').hidden=true;
 </script>
