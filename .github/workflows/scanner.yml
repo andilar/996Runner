@@ -8,6 +8,12 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 996-scanner-pages
+  cancel-in-progress: false
 
 jobs:
   scan:
@@ -23,6 +29,9 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
+      - name: Run tests
+        run: python -m unittest -v tests/test_scanner.py
 
       - name: Show state before scan
         run: |
@@ -52,7 +61,8 @@ jobs:
         run: |
           git config user.name  "996-scanner-bot"
           git config user.email "996-scanner-bot@users.noreply.github.com"
-          git add scanner/last_seen_ids.json scanner/all_time_favorites.json
+          git add scanner/last_seen_ids.json scanner/all_time_favorites.json \
+            scanner/market_history.sqlite docs/index.html
 
           if git diff --staged --quiet; then
             echo "Keine Änderungen am State – kein Commit nötig."
@@ -66,3 +76,24 @@ jobs:
           echo "─── Push ───"
           git push
           echo "Push erfolgreich."
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload dashboard
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy-pages:
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy dashboard to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,11 +1,18 @@
 import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from scanner.scanner import (
     ListingParser,
     _validate_listings,
     build_html,
+    compute_score,
+    save_seen_ids,
     update_all_time_favorites,
 )
+from scanner import scanner
+from scanner.market_history import dashboard_data, generate_dashboard, record_market_snapshot
 
 
 def make_listing(ad_id, title, price, date, desc=""):
@@ -68,6 +75,12 @@ class ListingParserTest(unittest.TestCase):
             listing["url"],
             "https://www.kleinanzeigen.de/s-anzeige/porsche-996/3513853384-216-5197",
         )
+        self.assertEqual(parser.next_href, "")
+
+    def test_finds_next_results_page(self):
+        parser = ListingParser()
+        parser.feed('<a aria-label="Nächste Seite" href="/s-autos/seite:2/996/k0c216">Weiter</a>')
+        self.assertEqual(parser.next_href, "/s-autos/seite:2/996/k0c216")
 
     def test_rejects_corrupt_results_before_they_are_marked_seen(self):
         corrupt = [
@@ -129,6 +142,51 @@ class ListingParserTest(unittest.TestCase):
 
         self.assertEqual(favorites[0]["id"], "old")
         self.assertEqual({item["id"] for item in favorites}, {"old", "new"})
+
+    def test_email_escapes_listing_content(self):
+        unsafe = make_listing("x", '<img src=x onerror="alert(1)">', "8.000 €", "Heute")
+        email = build_html([unsafe], [unsafe], [])
+        self.assertNotIn('<img src=x onerror="alert(1)">', email)
+        self.assertIn("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;", email)
+
+    def test_seen_ids_are_saved_deterministically(self):
+        with TemporaryDirectory() as directory:
+            original = scanner.STATE_FILE
+            scanner.STATE_FILE = Path(directory) / "seen.json"
+            try:
+                save_seen_ids({"3", "1", "2"})
+                self.assertEqual(scanner.STATE_FILE.read_text(), '["1", "2", "3"]')
+            finally:
+                scanner.STATE_FILE = original
+
+    def test_records_market_history_and_price_changes(self):
+        with TemporaryDirectory() as directory:
+            database = Path(directory) / "market.sqlite"
+            page = Path(directory) / "index.html"
+            first = [
+                make_listing("1", "Carrera", "20.000 €", "Heute"),
+                make_listing("2", "Carrera 4", "30.000 €", "Heute"),
+            ]
+            second = [
+                make_listing("1", "Carrera", "18.000 €", "Gestern"),
+                make_listing("3", "Targa", "40.000 €", "Heute"),
+            ]
+
+            initial = record_market_snapshot(
+                database, first, compute_score, datetime(2026, 9, 22, tzinfo=timezone.utc)
+            )
+            latest = record_market_snapshot(
+                database, second, compute_score, datetime(2026, 9, 23, tzinfo=timezone.utc)
+            )
+            generate_dashboard(database, page)
+            data = dashboard_data(database)
+
+            self.assertEqual(initial["median_price_eur"], 25000)
+            self.assertEqual(latest["new_count"], 1)
+            self.assertEqual(latest["removed_count"], 1)
+            self.assertEqual(latest["price_down_count"], 1)
+            self.assertEqual(data["price_changes"][0]["current_price"], 18000)
+            self.assertIn("Porsche 996", page.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

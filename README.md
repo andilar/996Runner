@@ -4,6 +4,10 @@ Täglicher Scanner für Porsche 996 Schaltwagen-Angebote auf Kleinanzeigen.de.
 Sendet eine HTML-Zusammenfassung per Gmail mit den drei bestbewerteten neuen
 Angeboten, weiteren Neuzugängen und den drei besten jemals gefundenen Angeboten.
 
+Die öffentliche Marktübersicht unter
+https://andilar.github.io/996Runner/ zeigt den historischen Medianpreis,
+den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
+
 ## Wie es funktioniert
 
 - GitHub Actions führt das Script täglich aus (Standard: 07:00 UTC).
@@ -21,9 +25,13 @@ Angeboten, weiteren Neuzugängen und den drei besten jemals gefundenen Angeboten
 .
 ├── .github/
 │   └── workflows/
-│       └── scan.yml           # GitHub Actions Workflow
+│       └── scanner.yml        # GitHub Actions Workflow
+├── docs/
+│   └── index.html             # Generierte GitHub-Pages-Marktübersicht
 ├── scanner/
 │   ├── scanner.py             # Hauptscript
+│   ├── market_history.py      # SQLite-Historie und Dashboard-Generator
+│   ├── market_history.sqlite  # Persistente Marktbeobachtungen
 │   ├── last_seen_ids.json     # Bereits gemeldete Anzeigen
 │   └── all_time_favorites.json # Persistente All-Time-Top-3
 ├── .gitignore
@@ -78,20 +86,24 @@ Im Tab **Actions** → "996 Scanner" → "Run workflow" → manuell starten.
 Beim ersten Lauf werden alle aktuellen Angebote als "neu" gemeldet
 (Mail wird entsprechend lang). Ab dem zweiten Lauf nur noch echte Neuzugänge.
 
+Unter **Settings → Pages → Build and deployment** als Quelle **GitHub Actions**
+auswählen. Jeder erfolgreiche Scan aktualisiert anschließend automatisch die
+öffentliche Marktübersicht.
+
 ## Lokal testen
 
 ```bash
-# Ohne E-Mail-Versand, schreibt scanner/preview.html
-python scanner/scanner.py
+# Ohne E-Mail-Versand, schreibt nur scanner/preview.html und verändert keinen State
+python3 scanner/scanner.py
 
 # Mit E-Mail
 export GMAIL_USER="..."
 export GMAIL_APP_PASSWORD="..."
 export NOTIFY_EMAIL="..."
-python scanner/scanner.py
+python3 scanner/scanner.py
 
 # Mit Debug-HTML-Dump (für Parser-Anpassungen)
-DEBUG=1 python scanner/scanner.py
+DEBUG=1 python3 scanner/scanner.py
 # → schreibt scanner/debug_last_fetch.html
 ```
 
@@ -105,7 +117,7 @@ Koordinaten z.B. von https://www.openstreetmap.org ablesen.
 
 **Scoring-Gewichte ändern:** in `compute_score()` die drei Zahlen (100/50/30) anpassen.
 
-**Scan-Zeitpunkt:** in `.github/workflows/scan.yml` den `cron`-Ausdruck ändern.
+**Scan-Zeitpunkt:** in `.github/workflows/scanner.yml` den `cron`-Ausdruck ändern.
 GitHub nutzt UTC – für 09:00 deutscher Zeit Sommerzeit `0 7 * * *`,
 für ganzjährig 09:00 Ortszeit gibt's keinen einfachen Cron, dafür müsste man
 zwei Schedules anlegen.

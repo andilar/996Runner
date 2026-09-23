@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Historische Angebotspreise und Marktbestand des Porsche 996 auf Kleinanzeigen.de">
+  <title>Porsche 996 Marktbeobachtung</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f3ee; --surface:#fff; --ink:#181817; --muted:#686760; --line:#d9d6cd; --accent:#9b1c1c; --accent-soft:#f3dddd; --grid:#dedbd3; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#171716; --surface:#222220; --ink:#f4f1e9; --muted:#aaa79e; --line:#3c3a35; --accent:#ef6b6b; --accent-soft:#4a2424; --grid:#3a3833; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:48px 0 64px; }
+    header { display:flex; justify-content:space-between; align-items:end; gap:24px; margin-bottom:32px; }
+    h1 { margin:0; font-family:Georgia,serif; font-size:clamp(2rem,5vw,4rem); font-weight:400; letter-spacing:-.04em; }
+    h2 { margin:0 0 14px; font-size:1rem; font-weight:650; }
+    .eyebrow { color:var(--accent); font-size:.75rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; margin-bottom:8px; }
+    .subtitle,.updated,.empty { color:var(--muted); }
+    .updated { font-size:.8rem; white-space:nowrap; }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+    .metric { background:var(--surface); border:1px solid var(--line); padding:18px; min-width:0; }
+    .metric span { display:block; color:var(--muted); font-size:.75rem; margin-bottom:8px; }
+    .metric strong { display:block; font-family:Georgia,serif; font-size:clamp(1.45rem,3vw,2.15rem); font-weight:400; }
+    .metric small { color:var(--muted); font-size:.72rem; }
+    .charts { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:28px; }
+    section { background:var(--surface); border:1px solid var(--line); padding:20px; }
+    svg { display:block; width:100%; height:280px; overflow:visible; }
+    .axis { fill:var(--muted); font-size:11px; }
+    .grid { stroke:var(--grid); stroke-width:1; }
+    .series { fill:none; stroke:var(--accent); stroke-width:2.5; }
+    .area { fill:var(--accent-soft); opacity:.65; }
+    .point { fill:var(--surface); stroke:var(--accent); stroke-width:2; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.86rem; }
+    th,td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; }
+    th { color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; }
+    td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    a { color:var(--accent); }
+    footer { margin-top:20px; color:var(--muted); font-size:.75rem; line-height:1.5; }
+    @media(max-width:760px) { header { align-items:start; flex-direction:column; } .metrics { grid-template-columns:repeat(2,1fr); } .charts { grid-template-columns:1fr; } main { padding-top:28px; } }
+    @media(max-width:420px) { .metrics { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">Kleinanzeigen Marktmonitor</div><h1>Porsche 996</h1><div class="subtitle">Angebotspreise und Marktbewegung im Zeitverlauf</div></div>
+    <div class="updated" id="updated">Noch keine Scans</div>
+  </header>
+  <div class="metrics" aria-label="Aktuelle Marktkennzahlen">
+    <div class="metric"><span>Medianpreis</span><strong id="median">–</strong><small id="direction">Noch kein Vergleich</small></div>
+    <div class="metric"><span>Online beobachtet</span><strong id="inventory">–</strong><small>Fahrzeuge im letzten Scan</small></div>
+    <div class="metric"><span>Neu / entfernt</span><strong id="movement">–</strong><small>Seit dem vorherigen Scan</small></div>
+    <div class="metric"><span>Preisspanne</span><strong id="range">–</strong><small id="priced">Angebote mit Preis</small></div>
+  </div>
+  <div class="charts">
+    <section><h2>Medianer Angebotspreis</h2><svg id="price-chart" role="img" aria-label="Medianer Angebotspreis pro Scan"></svg></section>
+    <section><h2>Online-Angebote</h2><svg id="inventory-chart" role="img" aria-label="Anzahl beobachteter Angebote pro Scan"></svg></section>
+  </div>
+  <section>
+    <h2>Letzte Preisänderungen</h2>
+    <div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Fahrzeug</th><th class="num">Vorher</th><th class="num">Aktuell</th><th class="num">Änderung</th></tr></thead><tbody id="changes"></tbody></table></div>
+    <p class="empty" id="no-changes">Noch keine Preisänderungen erfasst.</p>
+  </section>
+  <footer>Die Auswertung basiert auf öffentlich sichtbaren Angebotspreisen der konfigurierten Kleinanzeigen-Suche. Angebotspreise sind keine Verkaufspreise. Dubletten, fehlerhafte Anzeigen und Änderungen am Suchbestand können die Statistik beeinflussen.</footer>
+</main>
+<script id="market-data" type="application/json">__MARKET_DATA__</script>
+<script>
+const data=JSON.parse(document.getElementById('market-data').textContent), scans=data.scans;
+const euro=v=>v==null?'–':new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v);
+const when=v=>new Intl.DateTimeFormat('de-DE',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
+if(scans.length){
+  const latest=scans.at(-1), previous=scans.at(-2);
+  document.getElementById('updated').textContent='Stand '+when(latest.scanned_at);
+  document.getElementById('median').textContent=euro(latest.median_price_eur);
+  document.getElementById('inventory').textContent=latest.listing_count;
+  document.getElementById('movement').textContent=`+${latest.new_count} / −${latest.removed_count}`;
+  document.getElementById('range').textContent=`${euro(latest.minimum_price_eur)} – ${euro(latest.maximum_price_eur)}`;
+  document.getElementById('priced').textContent=`${latest.priced_count} Angebote mit Preis`;
+  if(previous?.median_price_eur!=null && latest.median_price_eur!=null){
+    const delta=latest.median_price_eur-previous.median_price_eur, pct=previous.median_price_eur?delta/previous.median_price_eur*100:0;
+    document.getElementById('direction').textContent=`${delta>0?'↑':delta<0?'↓':'→'} ${Math.abs(pct).toLocaleString('de-DE',{maximumFractionDigits:1})}% zum vorherigen Scan`;
+  }
+}
+function chart(id,key,format){
+  const svg=document.getElementById(id), values=scans.filter(d=>d[key]!=null);
+  if(!values.length){svg.outerHTML='<p class="empty">Die Zeitreihe beginnt mit dem nächsten erfolgreichen Scan.</p>';return;}
+  const W=700,H=280,m={t:12,r:12,b:34,l:64}, nums=values.map(d=>+d[key]), lo=Math.min(...nums),hi=Math.max(...nums), pad=Math.max((hi-lo)*.15,key==='listing_count'?2:1000), ymin=Math.max(0,lo-pad),ymax=hi+pad;
+  const x=i=>m.l+(values.length===1?.5:i/(values.length-1))*(W-m.l-m.r), y=v=>m.t+(ymax-v)/(ymax-ymin||1)*(H-m.t-m.b);
+  const ticks=[0,.25,.5,.75,1];
+  let html=ticks.map(t=>{const yy=m.t+t*(H-m.t-m.b),v=ymax-t*(ymax-ymin);return `<line class="grid" x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}"/><text class="axis" x="${m.l-8}" y="${yy+4}" text-anchor="end">${format(v)}</text>`}).join('');
+  const pts=values.map((d,i)=>`${x(i)},${y(d[key])}`).join(' '), base=H-m.b;
+  html+=`<polygon class="area" points="${m.l},${base} ${pts} ${x(values.length-1)},${base}"/><polyline class="series" points="${pts}"/>`;
+  html+=values.map((d,i)=>`<circle class="point" cx="${x(i)}" cy="${y(d[key])}" r="3"><title>${when(d.scanned_at)}: ${format(d[key])}</title></circle>`).join('');
+  const labels=[0,Math.floor((values.length-1)/2),values.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  html+=labels.map(i=>`<text class="axis" x="${x(i)}" y="${H-10}" text-anchor="${i===0?'start':i===values.length-1?'end':'middle'}">${new Date(values[i].scanned_at).toLocaleDateString('de-DE')}</text>`).join('');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML=html;
+}
+chart('price-chart','median_price_eur',v=>`${Math.round(v/1000)} T€`);
+chart('inventory-chart','listing_count',v=>Math.round(v));
+const tbody=document.getElementById('changes');
+for(const c of data.price_changes){const delta=c.current_price-c.previous_price,tr=document.createElement('tr');
+  const date=document.createElement('td');date.textContent=when(c.scanned_at);tr.append(date);
+  const car=document.createElement('td'),a=document.createElement('a');a.href=c.url;a.textContent=c.title;a.rel='noopener';car.append(a);tr.append(car);
+  for(const value of [euro(c.previous_price),euro(c.current_price),(delta>0?'+':'')+euro(delta)]){const td=document.createElement('td');td.className='num';td.textContent=value;tr.append(td);} tbody.append(tr);
+}
+if(data.price_changes.length)document.getElementById('no-changes').hidden=true;
+</script>
+</body>
+</html>

@@ -191,6 +191,12 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Scanner runtime previews and SQLite sidecar files
+scanner/preview.html
+scanner/debug_fetch_page_*.html
+scanner/*.sqlite-shm
+scanner/*.sqlite-wal
+
 # PyPI configuration file
 .pypirc
 

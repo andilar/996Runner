@@ -9,12 +9,20 @@ import json
 import re
 import math
 import smtplib
+import time
 import urllib.request
+from urllib.parse import urljoin
+from pathlib import Path
 from datetime import datetime, date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from html import unescape
+from html import escape, unescape
 from html.parser import HTMLParser
+
+try:
+    from .market_history import generate_dashboard, record_market_snapshot
+except ImportError:  # Direct execution: python scanner/scanner.py
+    from market_history import generate_dashboard, record_market_snapshot
 
 # ─── Konfiguration ───────────────────────────────────────────────────────────
 
@@ -31,9 +39,16 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-STATE_FILE = "scanner/last_seen_ids.json"
-FAVORITES_FILE = "scanner/all_time_favorites.json"
-DEBUG_HTML = "scanner/debug_last_fetch.html"
+SCANNER_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = SCANNER_DIR.parent
+STATE_FILE = SCANNER_DIR / "last_seen_ids.json"
+FAVORITES_FILE = SCANNER_DIR / "all_time_favorites.json"
+DATABASE_FILE = SCANNER_DIR / "market_history.sqlite"
+DASHBOARD_FILE = PROJECT_DIR / "docs" / "index.html"
+DEBUG_HTML = SCANNER_DIR / "debug_last_fetch.html"
+MARKET_DASHBOARD_URL = os.environ.get(
+    "MARKET_DASHBOARD_URL", "https://andilar.github.io/996Runner/"
+)
 
 GMAIL_USER   = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "")
@@ -224,6 +239,7 @@ class ListingParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.listings: list[dict] = []
+        self.next_href = ""
         self._cur: dict = {}
         self._in_article = False
         self._article_text = ""
@@ -243,6 +259,15 @@ class ListingParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         cls   = self._cls(attrs)
+
+        rel = attrs.get("rel", "")
+        label = f"{attrs.get('aria-label', '')} {attrs.get('title', '')}".lower()
+        if (
+            tag in ("a", "link")
+            and attrs.get("href")
+            and ("next" in rel.lower() or "nächste" in label or "naechste" in label)
+        ):
+            self.next_href = attrs["href"]
 
         if tag == "article" and "data-adid" in attrs:
             href = attrs.get("data-href", "")
@@ -395,25 +420,36 @@ class ListingParser(HTMLParser):
 # ─── Fetch ────────────────────────────────────────────────────────────────────
 
 def fetch_listings(url: str) -> list[dict]:
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        html = resp.read().decode("utf-8", errors="replace")
+    listings_by_id: dict[str, dict] = {}
+    visited_urls = set()
+    next_url = url
+    max_pages = 20
 
-    if DEBUG:
-        os.makedirs("scanner", exist_ok=True)
-        with open(DEBUG_HTML, "w", encoding="utf-8") as f:
-            f.write(html)
-        print(f"  [DEBUG] HTML gespeichert: {DEBUG_HTML}")
+    while next_url and next_url not in visited_urls and len(visited_urls) < max_pages:
+        visited_urls.add(next_url)
+        html = _fetch_html(next_url)
 
-    parser = ListingParser()
-    parser.feed(html)
-    listings = parser.listings
+        if DEBUG:
+            DEBUG_HTML.parent.mkdir(parents=True, exist_ok=True)
+            page_number = len(visited_urls)
+            debug_path = DEBUG_HTML.with_name(f"debug_fetch_page_{page_number}.html")
+            debug_path.write_text(html, encoding="utf-8")
+            print(f"  [DEBUG] HTML gespeichert: {debug_path}")
 
-    if not listings:
-        print("  HTMLParser lieferte 0 Ergebnisse – Regex-Fallback...")
-        listings = _regex_fallback(html)
+        parser = ListingParser()
+        parser.feed(html)
+        page_listings = parser.listings
+        if not page_listings:
+            print("  HTMLParser lieferte 0 Ergebnisse – Regex-Fallback...")
+            page_listings = _regex_fallback(html)
+        _validate_listings(page_listings)
+        listings_by_id.update({item["id"]: item for item in page_listings})
+        next_url = urljoin(next_url, parser.next_href) if parser.next_href else ""
 
-    _validate_listings(listings)
+    if next_url and len(visited_urls) >= max_pages:
+        raise RuntimeError(f"Mehr als {max_pages} Ergebnisseiten; Scan abgebrochen")
+
+    listings = list(listings_by_id.values())
 
     print(f"  Parser: {len(listings)} Angebote, "
           f"Titel: {sum(1 for l in listings if l['title'])}, "
@@ -422,6 +458,23 @@ def fetch_listings(url: str) -> list[dict]:
           f"Bild: {sum(1 for l in listings if l['image'])}")
 
     return listings
+
+
+def _fetch_html(url: str, attempts: int = 3) -> str:
+    """Fetch one results page with short retries for transient failures."""
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except OSError as error:
+            last_error = error
+            if attempt < attempts:
+                delay = attempt * 2
+                print(f"  Abruf fehlgeschlagen ({attempt}/{attempts}), neuer Versuch in {delay}s")
+                time.sleep(delay)
+    raise RuntimeError(f"Abruf nach {attempts} Versuchen fehlgeschlagen: {last_error}")
 
 
 def _validate_listings(listings: list[dict]):
@@ -496,7 +549,7 @@ def load_seen_ids() -> set:
 def save_seen_ids(ids: set):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     with open(STATE_FILE, "w") as f:
-        json.dump(list(ids), f)
+        json.dump(sorted(ids), f)
 
 
 def find_new(listings: list[dict], seen: set) -> list[dict]:
@@ -530,21 +583,23 @@ def save_all_time_favorites(favorites: list[dict]):
 
 def _top_card(listing: dict, score: float, rank: int) -> str:
     """Große Card für ein Top-Angebot mit Bild und Details."""
-    title = listing["title"] or "–"
-    price = listing["price"] or "k.A."
-    loc   = listing["location"] or "–"
-    km    = listing["km"] or "–"
-    year  = listing["year"] or "–"
-    url   = listing["url"] or "#"
-    img   = listing["image"] or ""
-    desc  = listing.get("desc", "")
+    raw_title = listing["title"] or "–"
+    raw_desc = listing.get("desc", "")
+    title = escape(raw_title)
+    price = escape(listing["price"] or "k.A.")
+    loc   = escape(listing["location"] or "–")
+    km    = escape(listing["km"] or "–")
+    year  = escape(listing["year"] or "–")
+    url   = escape(listing["url"] or "#", quote=True)
+    img   = escape(listing["image"] or "", quote=True)
+    desc  = escape(raw_desc)
     dist  = listing.get("distance_km")
     online_since = listing.get("date") or "–"
 
     if len(desc) > 220:
         desc = desc[:220].rsplit(" ", 1)[0] + "…"
 
-    highlights = detect_highlights(f"{title} {desc}")
+    highlights = detect_highlights(f"{raw_title} {raw_desc}")
     badges = "".join(
         f'<span style="display:inline-block;font-size:11px;font-weight:600;'
         f'padding:3px 9px;border-radius:4px;margin:0 6px 4px 0;'
@@ -606,15 +661,17 @@ def _top_card(listing: dict, score: float, rank: int) -> str:
 
 def _compact_row(listing: dict) -> str:
     """Kompakte Tabellenzeile für den Rest."""
-    title = listing["title"] or "–"
-    price = listing["price"] or "k.A."
-    loc   = listing["location"] or "–"
-    km    = listing["km"] or "–"
-    year  = listing["year"] or "–"
-    url   = listing["url"] or "#"
+    raw_title = listing["title"] or "–"
+    raw_desc = listing.get("desc", "")
+    title = escape(raw_title)
+    price = escape(listing["price"] or "k.A.")
+    loc   = escape(listing["location"] or "–")
+    km    = escape(listing["km"] or "–")
+    year  = escape(listing["year"] or "–")
+    url   = escape(listing["url"] or "#", quote=True)
     dist  = listing.get("distance_km")
 
-    highlights = detect_highlights(f"{title} {listing.get('desc','')}")
+    highlights = detect_highlights(f"{raw_title} {raw_desc}")
     badges = "".join(
         f'<span style="display:inline-block;font-size:9px;font-weight:600;'
         f'padding:1px 5px;border-radius:3px;margin-left:4px;'
@@ -754,6 +811,9 @@ def build_html(
     <a href="{SEARCH_URL}" style="display:inline-block;background:#185FA5;color:#fff;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
       Alle Angebote ansehen →
     </a>
+    <a href="{MARKET_DASHBOARD_URL}" style="display:inline-block;color:#185FA5;padding:10px 18px;text-decoration:none;font-size:13px;font-weight:600;">
+      Marktverlauf →
+    </a>
   </div>
 
   <p style="text-align:center;padding:12px;font-size:11px;color:#bbb;margin:0;">
@@ -789,11 +849,7 @@ def main():
     new  = find_new(listings, seen)
     print(f"  {len(new)} davon neu")
 
-    all_ids = seen | {l["id"] for l in listings}
-    save_seen_ids(all_ids)
-
     favorites = update_all_time_favorites(load_all_time_favorites(), listings)
-    save_all_time_favorites(favorites)
 
     subject = (
         f"🏎 996 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"
@@ -802,14 +858,24 @@ def main():
     )
     html = build_html(new, listings, favorites)
 
-    if GMAIL_USER and GMAIL_PASS:
+    if GMAIL_USER and GMAIL_PASS and NOTIFY_EMAIL:
         send_email(subject, html)
+        all_ids = seen | {l["id"] for l in listings}
+        save_seen_ids(all_ids)
+        save_all_time_favorites(favorites)
+        metrics = record_market_snapshot(DATABASE_FILE, listings, compute_score)
+        generate_dashboard(DATABASE_FILE, DASHBOARD_FILE)
+        print(
+            "Marktdaten gespeichert: "
+            f"{metrics['listing_count']} Angebote, "
+            f"Median {metrics['median_price_eur'] or 0:.0f} €"
+        )
     else:
-        print("GMAIL_USER / GMAIL_APP_PASSWORD nicht gesetzt – E-Mail übersprungen")
+        print("E-Mail-Konfiguration fehlt – Versand und State-Update übersprungen")
         os.makedirs("scanner", exist_ok=True)
-        with open("scanner/preview.html", "w") as f:
+        with open(SCANNER_DIR / "preview.html", "w", encoding="utf-8") as f:
             f.write(html)
-        print("HTML-Vorschau gespeichert: scanner/preview.html")
+        print(f"HTML-Vorschau gespeichert: {SCANNER_DIR / 'preview.html'}")
 
     print("Fertig.")
 
