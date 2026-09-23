@@ -6,10 +6,10 @@
   <meta name="description" content="Historische Angebotspreise und Marktbestand des Porsche 996 auf Kleinanzeigen.de">
   <title>Porsche 996 // Market Intelligence</title>
   <style>
-    :root { color-scheme:dark; --void:#030405; --panel:#07090a; --ink:#e8e7df; --muted:#777b7b; --dim:#383d3e; --line:#24292a; --red:#ef302f; --red-dim:#641b1c; --amber:#f3a712; --amber-dim:#674b13; --cyan:#5fb9c2; --white:#f2f0e8; }
+    :root { color-scheme:dark; --void:#0b0d0e; --panel:#141719; --chart:#191c1e; --ink:#f0efe8; --muted:#a4a8a8; --dim:#555b5d; --line:#383e40; --red:#ff4846; --red-dim:#8b292a; --amber:#ffbd32; --amber-dim:#8a671e; --cyan:#79d4de; --white:#fffef8; }
     * { box-sizing:border-box; }
     html { background:var(--void); }
-    body { margin:0; color:var(--ink); font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; background:radial-gradient(circle at 50% 42%,rgba(111,32,19,.12),transparent 37%),radial-gradient(circle,rgba(255,255,255,.11) 0 1px,transparent 1.2px) 0 0/22px 22px,var(--void); min-height:100vh; }
+    body { margin:0; color:var(--ink); font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; background:radial-gradient(circle at 50% 42%,rgba(133,47,31,.13),transparent 37%),radial-gradient(circle,rgba(255,255,255,.13) 0 1px,transparent 1.2px) 0 0/22px 22px,var(--void); min-height:100vh; }
     body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.23; background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px); }
     main { width:min(1380px,calc(100% - 40px)); margin:auto; padding:24px 0 50px; }
     .system-bar { display:flex; align-items:center; justify-content:space-between; gap:20px; min-height:30px; border-top:1px solid var(--dim); border-bottom:1px solid var(--line); color:var(--muted); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
@@ -32,24 +32,24 @@
     .metric strong { display:block; color:var(--white); font-size:clamp(1.25rem,2.7vw,2.35rem); line-height:1; font-weight:400; letter-spacing:-.06em; font-variant-numeric:tabular-nums; }
     .metric small { display:block; color:var(--amber); font-size:8px; letter-spacing:.05em; margin-top:9px; text-transform:uppercase; }
     .telemetry { display:grid; grid-template-columns:minmax(0,2fr) minmax(280px,1fr); gap:14px; padding:14px 0; }
-    .panel,.changes-panel { position:relative; border:1px solid var(--line); background:rgba(4,6,7,.78); padding:16px; overflow:hidden; }
+    .panel,.changes-panel { position:relative; border:1px solid var(--dim); background:rgba(20,23,25,.92); padding:16px; overflow:hidden; }
     .panel::after,.changes-panel::after { content:""; position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-right:1px solid var(--amber); border-bottom:1px solid var(--amber); }
     .panel-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding-bottom:11px; border-bottom:1px solid var(--line); }
     h2 { margin:0; color:var(--ink); font-size:9px; font-weight:500; letter-spacing:.13em; text-transform:uppercase; }
     .channel { color:var(--red); font-size:8px; letter-spacing:.1em; }
-    .chart-wrap { position:relative; }
+    .chart-wrap { position:relative; margin-top:10px; background:linear-gradient(180deg,rgba(255,255,255,.025),transparent),var(--chart); border:1px solid var(--line); }
     .chart-wrap::before,.chart-wrap::after { content:""; position:absolute; pointer-events:none; background:var(--line); opacity:.55; }
     .chart-wrap::before { width:1px; top:10px; bottom:20px; left:50%; }
     .chart-wrap::after { height:1px; left:55px; right:10px; top:50%; }
     svg { display:block; width:100%; height:330px; overflow:visible; }
-    .axis { fill:var(--muted); font-size:9px; letter-spacing:.04em; }
-    .grid { stroke:var(--line); stroke-width:1; stroke-dasharray:2 5; }
-    .series { fill:none; stroke:var(--amber); stroke-width:1.5; filter:drop-shadow(0 0 3px rgba(243,167,18,.35)); }
-    .inventory-series { stroke:var(--cyan); filter:drop-shadow(0 0 3px rgba(95,185,194,.35)); }
-    .area { fill:var(--amber); opacity:.07; }
+    .axis { fill:#c5c8c5; font-size:10px; font-weight:500; letter-spacing:.04em; }
+    .grid { stroke:#555b5d; stroke-width:1; stroke-dasharray:2 5; }
+    .series { fill:none; stroke:var(--amber); stroke-width:2.5; filter:drop-shadow(0 0 5px rgba(255,189,50,.55)); }
+    .inventory-series { stroke:var(--cyan); filter:drop-shadow(0 0 5px rgba(121,212,222,.55)); }
+    .area { fill:var(--amber); opacity:.14; }
     .inventory-area { fill:var(--cyan); }
-    .point { fill:var(--void); stroke:var(--red); stroke-width:1.5; }
-    .tick-mark { stroke:var(--amber-dim); stroke-width:1; }
+    .point { fill:var(--chart); stroke:var(--red); stroke-width:2.25; }
+    .tick-mark { stroke:var(--amber); stroke-width:1; opacity:.65; }
     .empty { color:var(--muted); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:44px 8px; }
     .changes-panel { margin-top:0; }
     .table-wrap { overflow-x:auto; margin-top:8px; }
