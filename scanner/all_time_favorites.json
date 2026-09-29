@@ -1,5 +1,19 @@
 [
   {
+    "id": "3526106639",
+    "title": "Porsche 996.2 mit ATM",
+    "price": "24.000 €",
+    "location": "20249 Hamburg Eppendorf",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-2-mit-atm/3526106639-216-9476",
+    "date": "Gestern",
+    "km": "320.000 km",
+    "year": "2001",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/83/8339b2b3-593e-4aec-b87a-d689bb7bfd49?rule=$_59.AUTO",
+    "desc": "Hiermit biete ich meinen Porsche 996 Schalter mit Austauschmotor an. Der Motor hat nun eine Laufleistung von 140tkm.\nAlpine Radio, Turbositze, Sportauspuf, Schiebedach.\nBitte Erstkontakt über Mail, dann gerne per Telefon.",
+    "plz": "20249",
+    "distance_km": 132
+  },
+  {
     "id": "3479196330",
     "title": "Porsche 996 Millenium Edition",
     "price": "VB",
@@ -26,19 +40,5 @@
     "desc": "Hallo, der 996 ist bis 2020 Scheckheftgepflegt ( 160000 km) da habe ich ihn gekauft und ab da alles selber gemacht. Wartung sowieso, dann Dichtung Zwischenwelle und den Elring mit Kupplung erneuert, Spurplatten 5mm und ein Edelstahl Sportauspuff v...",
     "plz": "48691",
     "distance_km": 209
-  },
-  {
-    "id": "3511598932",
-    "title": "Porsche 996 C4 Schalter  Motor - und Getrieberevision ",
-    "price": "VB",
-    "location": "35274 Kirchhain",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-c4-schalter-motor-und-getrieberevision-/3511598932-216-4678",
-    "date": "13.09.2026",
-    "km": "217.000 km",
-    "year": "1999",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/68/686fc32e-0105-47e6-975a-a351d68685a9?rule=$_59.AUTO",
-    "desc": "Fahrzeug ist aus 4. Hand,alle Scheckhefteintragungen vorhanden.\nMotorrevision (Stahlbuchsen mit IMS Lager) in 2022.\nMotor hat 37000km gelaufen.Rechnung mit Anbauteilen wie Auspuffanlage, Querlenker, Stoßdämpfer usw. von über 25000 Euro vorhanden.\n...",
-    "plz": "35274",
-    "distance_km": 220
   }
 ]
