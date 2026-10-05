@@ -1,5 +1,19 @@
 [
   {
+    "id": "3531861510",
+    "title": "Porsche 996 4S / Klappe, Manual, Schiebdach, 9FF Austauschmotor",
+    "price": "996 € VB",
+    "location": "58454 Witten",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-4s-klappe-manual-schiebdach-9ff-austauschmotor/3531861510-216-1021",
+    "date": "Heute",
+    "km": "76.000 km",
+    "year": "2005",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/ef9b42f4-ac62-4022-949a-e847abe6f236?rule=$_59.AUTO",
+    "desc": "Preis 45599 VB im vernünftigen Rahmen.\n\nAlle Infos hier:\n\nhttps://www.elferspot.com/de/fahrzeug/porsche-996-2-carrera-4s-2005-6244639/\n\nBei Fragen gene melden.\n\nDas Fahrzeug im Detail\nZum Verkauf steht mein gepflegter Porsche 911 Carrera 4S der Ba...",
+    "plz": "58454",
+    "distance_km": 245
+  },
+  {
     "id": "3526106639",
     "title": "Porsche 996.2 mit ATM",
     "price": "24.000 €",
@@ -26,19 +40,5 @@
     "desc": "Porsche 996 Millenium Edition\nNR. 480 von 911 limitierten Stück\n136.000km EZ: 01/2000 300PS\n3 Vorbesitzer, Service Neu, Motor komplett überholt, Serviceheft und umfangreiche Historie",
     "plz": "20259",
     "distance_km": 132
-  },
-  {
-    "id": "3501111548",
-    "title": "Porsche 911/ 996  Carrera 4  Cabrio  Handschalter",
-    "price": "VB",
-    "location": "48691 Vreden",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-911-996-carrera-4-cabrio-handschalter/3501111548-216-1345",
-    "date": "01.09.2026",
-    "km": "160000 km",
-    "year": "2000",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/68/6830fb58-c4d6-4c47-a6f5-6f7fc2757dac?rule=$_59.AUTO",
-    "desc": "Hallo, der 996 ist bis 2020 Scheckheftgepflegt ( 160000 km) da habe ich ihn gekauft und ab da alles selber gemacht. Wartung sowieso, dann Dichtung Zwischenwelle und den Elring mit Kupplung erneuert, Spurplatten 5mm und ein Edelstahl Sportauspuff v...",
-    "plz": "48691",
-    "distance_km": 209
   }
 ]
