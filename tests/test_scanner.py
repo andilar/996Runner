@@ -8,6 +8,8 @@ from scanner.scanner import (
     _validate_listings,
     build_html,
     compute_score,
+    is_rankable_listing,
+    ranking_price_eur,
     save_seen_ids,
     update_all_time_favorites,
 )
@@ -142,6 +144,59 @@ class ListingParserTest(unittest.TestCase):
 
         self.assertEqual(favorites[0]["id"], "old")
         self.assertEqual({item["id"] for item in favorites}, {"old", "new"})
+
+    def test_placeholder_price_uses_explicit_description_price(self):
+        listing = make_listing(
+            "placeholder",
+            "Porsche 996 4S mit Austauschmotor",
+            "996 € VB",
+            "Heute",
+            "Preis 45599 VB im vernünftigen Rahmen.",
+        )
+
+        score, breakdown = compute_score(listing)
+
+        self.assertEqual(ranking_price_eur(listing), 45599)
+        self.assertTrue(is_rankable_listing(listing))
+        self.assertEqual(breakdown["price"], 0)
+        self.assertIn("45.599 €*", build_html([listing], [listing], []))
+        self.assertGreaterEqual(score, 100)
+
+    def test_unexplained_placeholder_price_is_not_ranked(self):
+        placeholder = make_listing(
+            "placeholder", "Porsche 996", "996 € VB", "Heute", "Bitte anfragen."
+        )
+        regular = make_listing("regular", "Porsche 996 Carrera", "20.000 €", "Heute")
+
+        favorites = update_all_time_favorites([], [placeholder, regular])
+        email = build_html([placeholder, regular], [placeholder, regular], [])
+
+        self.assertFalse(is_rankable_listing(placeholder))
+        self.assertEqual([item["id"] for item in favorites], ["regular"])
+        self.assertLess(email.index("Porsche 996 Carrera"), email.index("Weitere neue Angebote"))
+        self.assertGreater(
+            email.index("https://example.test/placeholder"),
+            email.index("Weitere neue Angebote"),
+        )
+
+    def test_wanted_ad_is_excluded_from_top_rankings(self):
+        wanted = make_listing(
+            "wanted",
+            "Suche Porsche 911 Carrera 996 Coupé",
+            "29.999 € VB",
+            "Heute",
+            "Wenig KM oder dokumentierte Motorrevision.",
+        )
+        regular = make_listing("regular", "Porsche 996 Carrera", "30.000 €", "Heute")
+
+        favorites = update_all_time_favorites([wanted], [regular])
+
+        self.assertFalse(is_rankable_listing(wanted))
+        self.assertEqual([item["id"] for item in favorites], ["regular"])
+
+        wanted_only_email = build_html([wanted], [wanted], [])
+        self.assertIn("Keine neuen rankbaren Verkaufsangebote", wanted_only_email)
+        self.assertIn("Weitere neue Angebote (1)", wanted_only_email)
 
     def test_email_escapes_listing_content(self):
         unsafe = make_listing("x", '<img src=x onerror="alert(1)">', "8.000 €", "Heute")

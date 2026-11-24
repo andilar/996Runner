@@ -192,6 +192,57 @@ def parse_price(price_str: str) -> int | None:
     return int(m.group(1).replace(".", ""))
 
 
+MIN_PLAUSIBLE_PRICE_EUR = 8_000
+
+WANTED_TITLE_PATTERNS = (
+    re.compile(r"^\s*(?:suche|gesucht|ankauf|kaufe|wir\s+suchen)\b", re.I),
+    re.compile(r"\b(?:ankauf|(?:dringend\s+)?gesucht)\s*[!?.]*$", re.I),
+)
+
+DESCRIPTION_PRICE_RE = re.compile(
+    r"\b(?:kaufpreis|preis)\s*(?:ist|liegt\s+bei|[:=-])?\s*"
+    r"(\d{1,3}(?:\.\d{3})+|\d{4,6})\s*(?:€|eur|vb)?\b",
+    re.I,
+)
+
+
+def _description_price_eur(description: str) -> int | None:
+    """Liest einen ausdrücklich benannten Kaufpreis aus der Beschreibung."""
+    match = DESCRIPTION_PRICE_RE.search(description or "")
+    return int(match.group(1).replace(".", "")) if match else None
+
+
+def ranking_price_eur(listing: dict) -> int | None:
+    """Liefert einen plausiblen Preis und korrigiert offensichtliche Platzhalter."""
+    advertised = parse_price(listing.get("price", ""))
+    if advertised is None or advertised >= MIN_PLAUSIBLE_PRICE_EUR:
+        return advertised
+
+    described = _description_price_eur(listing.get("desc", ""))
+    return described if described is not None and described >= MIN_PLAUSIBLE_PRICE_EUR else None
+
+
+def is_rankable_listing(listing: dict) -> bool:
+    """Lässt nur Verkaufsangebote ohne ungeklärten Platzhalterpreis ins Ranking."""
+    title = listing.get("title", "") or ""
+    if any(pattern.search(title) for pattern in WANTED_TITLE_PATTERNS):
+        return False
+
+    advertised = parse_price(listing.get("price", ""))
+    return advertised is None or ranking_price_eur(listing) is not None
+
+
+def _ranking_price_display(listing: dict) -> str:
+    """Kennzeichnet einen aus der Beschreibung korrigierten Rankingpreis."""
+    original = listing.get("price", "") or "k.A."
+    advertised = parse_price(original)
+    ranked = ranking_price_eur(listing)
+    if advertised is not None and ranked is not None and advertised != ranked:
+        corrected = f"{ranked:,}".replace(",", ".")
+        return f"{corrected} €*"
+    return original
+
+
 # ─── Score-Berechnung ─────────────────────────────────────────────────────────
 
 def compute_score(listing: dict) -> tuple[float, dict]:
@@ -210,7 +261,7 @@ def compute_score(listing: dict) -> tuple[float, dict]:
     if "Motorrevision" in labels:
         bd["motor"] = 100
 
-    price = parse_price(listing.get("price", ""))
+    price = ranking_price_eur(listing)
     if price is not None:
         if price <= 8000:     bd["price"] = 50
         elif price >= 35000:  bd["price"] = 0
@@ -569,7 +620,8 @@ def update_all_time_favorites(
     """Merge current findings into the persistent all-time top three."""
     by_id = {listing["id"]: listing for listing in favorites}
     by_id.update({listing["id"]: listing for listing in current_listings})
-    ranked = sorted(by_id.values(), key=lambda listing: compute_score(listing)[0], reverse=True)
+    candidates = [listing for listing in by_id.values() if is_rankable_listing(listing)]
+    ranked = sorted(candidates, key=lambda listing: compute_score(listing)[0], reverse=True)
     return ranked[:3]
 
 
@@ -586,7 +638,7 @@ def _top_card(listing: dict, score: float, rank: int) -> str:
     raw_title = listing["title"] or "–"
     raw_desc = listing.get("desc", "")
     title = escape(raw_title)
-    price = escape(listing["price"] or "k.A.")
+    price = escape(_ranking_price_display(listing))
     loc   = escape(listing["location"] or "–")
     km    = escape(listing["km"] or "–")
     year  = escape(listing["year"] or "–")
@@ -664,7 +716,7 @@ def _compact_row(listing: dict) -> str:
     raw_title = listing["title"] or "–"
     raw_desc = listing.get("desc", "")
     title = escape(raw_title)
-    price = escape(listing["price"] or "k.A.")
+    price = escape(_ranking_price_display(listing))
     loc   = escape(listing["location"] or "–")
     km    = escape(listing["km"] or "–")
     year  = escape(listing["year"] or "–")
@@ -705,7 +757,7 @@ def build_html(
 
     scored_new = [(compute_score(l)[0], l) for l in new_listings]
     scored_new.sort(key=lambda t: t[0], reverse=True)
-    top3_new = scored_new[:3]
+    top3_new = [(s, l) for s, l in scored_new if is_rankable_listing(l)][:3]
     top3_new_ids = {l["id"] for _, l in top3_new}
     rest = [(s, l) for s, l in scored_new if l["id"] not in top3_new_ids]
 
@@ -713,7 +765,7 @@ def build_html(
     scored_favorites.sort(key=lambda t: t[0], reverse=True)
 
     highlight_count = sum(
-        1 for _, l in scored_new
+        1 for _, l in scored_new if is_rankable_listing(l)
         if detect_highlights(f"{l.get('title','')} {l.get('desc','')}")
     )
 
@@ -732,9 +784,14 @@ def build_html(
           {new_top_cards}
         </div>"""
     else:
-        new_top_section = """
+        empty_message = (
+            "Heute keine neuen Angebote."
+            if not new_listings else
+            "Keine neuen rankbaren Verkaufsangebote."
+        )
+        new_top_section = f"""
         <div style="padding:30px 28px;text-align:center;color:#888;">
-          Heute keine neuen Angebote.
+          {empty_message}
         </div>"""
 
     if rest:
@@ -817,7 +874,8 @@ def build_html(
   </div>
 
   <p style="text-align:center;padding:12px;font-size:11px;color:#bbb;margin:0;">
-    Automatisch generiert von 996-Scanner · GitHub Actions
+    Automatisch generiert von 996-Scanner · GitHub Actions<br>
+    * Rankingpreis aus der Beschreibung bei unplausiblem Anzeigenpreis
   </p>
 </div>
 </body>

@@ -15,6 +15,8 @@ den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
 - Alle aktuellen Angebote werden bewertet:
   - **Motorrevision** (+100), **Preis** (+0..50), **Entfernung zu XXX Ort** (+0..30)
   - Plus Boni für Scheckheft, 1. Hand, Facelift, Wenig KM
+  - Suchanzeigen und nicht erklärte Platzhalterpreise unter 8.000 € kommen nicht in Top-Listen
+  - Ein ausdrücklich genannter Preis in der Beschreibung ersetzt für das Ranking einen Platzhalterpreis
 - Oben erscheinen die Top 3 der neuen Angebote als große Cards mit Online-Datum.
 - Unten stehen die persistent gespeicherten All-Time-Top-3; weitere neue Angebote
   werden dazwischen als kompakte Tabelle angezeigt.

@@ -155,6 +155,13 @@ Referenzlogik:
 
 Fehlende Preise oder Postleitzahlen dürfen den Lauf nicht verhindern; der jeweilige Teilscore beträgt dann null. Die Entfernung wird per Haversine-Formel aus der Referenzposition und groben Koordinaten der ersten zwei PLZ-Ziffern berechnet.
 
+Für die Qualität der Top-Listen gelten zusätzlich folgende Regeln:
+
+- Such- und Ankaufanzeigen werden nicht als Verkaufsofferten gerankt.
+- Anzeigenpreise unter 8.000 EUR gelten als unplausible Platzhalterpreise.
+- Nennt die Beschreibung ausdrücklich einen plausiblen Kaufpreis, wird dieser für das Ranking verwendet und in der Ausgabe gekennzeichnet.
+- Ein unplausibler Anzeigenpreis ohne korrigierbaren Beschreibungspreis schließt das Angebot aus den Top-Listen aus; in der vollständigen Liste bleibt es sichtbar.
+
 ## 7. Zustandsverwaltung
 
 ### FR-08: Bereits gesehene Angebote
