@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload failing live HTML
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: live-parser-failure-${{ github.run_id }}
           path: scanner/live_check_failure.html
@@ -132,15 +132,15 @@ jobs:
           ref: main
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
         with:
           enablement: true
 
       - name: Upload dashboard
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs
 
       - name: Deploy dashboard to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
