@@ -7,10 +7,12 @@ from scanner.scanner import (
     ListingParser,
     _validate_listings,
     build_html,
+    check_listing_availability,
     compute_score,
     is_rankable_listing,
     ranking_price_eur,
     save_seen_ids,
+    select_available_ranked_listings,
     update_all_time_favorites,
 )
 from scanner import scanner
@@ -197,6 +199,65 @@ class ListingParserTest(unittest.TestCase):
         wanted_only_email = build_html([wanted], [wanted], [])
         self.assertIn("Keine neuen rankbaren Verkaufsangebote", wanted_only_email)
         self.assertIn("Weitere neue Angebote (1)", wanted_only_email)
+
+    def test_availability_check_detects_removed_detail_page(self):
+        listing = make_listing("removed", "Porsche 996", "20.000 €", "Heute")
+
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def getcode(self):
+                return self.status
+
+            def read(self, _limit):
+                return b"<h1>Diese Anzeige ist leider nicht mehr verf&uuml;gbar</h1>"
+
+        self.assertFalse(
+            check_listing_availability(
+                listing, opener=lambda *_args, **_kwargs: Response()
+            )
+        )
+
+    def test_availability_network_error_is_inconclusive(self):
+        listing = make_listing("unknown", "Porsche 996", "20.000 €", "Heute")
+
+        def failing_opener(*_args, **_kwargs):
+            raise OSError("temporary TLS failure")
+
+        self.assertIsNone(check_listing_availability(listing, opener=failing_opener))
+
+    def test_unavailable_favorite_is_replaced(self):
+        removed = make_listing(
+            "removed", "Porsche 996 mit Motorrevision", "20.000 €", "Gestern"
+        )
+        first = make_listing("first", "Porsche 996 Carrera", "21.000 €", "Heute")
+        second = make_listing("second", "Porsche 996 Carrera 4", "22.000 €", "Heute")
+        statuses = {"removed": False, "first": True, "second": True}
+
+        favorites = update_all_time_favorites(
+            [removed], [first, second], lambda listing: statuses[listing["id"]]
+        )
+
+        self.assertEqual([listing["id"] for listing in favorites], ["first", "second"])
+        self.assertTrue(removed["_ranking_unavailable"])
+
+        selected = select_available_ranked_listings(
+            [removed, first, second], 2, lambda listing: statuses[listing["id"]]
+        )
+        self.assertEqual([listing["id"] for listing in selected], ["first", "second"])
+
+        email = build_html([removed, first, second], [removed, first, second], selected)
+        self.assertLess(email.index("Porsche 996 Carrera"), email.index("Weitere neue Angebote"))
+        self.assertGreater(
+            email.index("https://example.test/removed"),
+            email.index("Weitere neue Angebote"),
+        )
 
     def test_email_escapes_listing_content(self):
         unsafe = make_listing("x", '<img src=x onerror="alert(1)">', "8.000 €", "Heute")

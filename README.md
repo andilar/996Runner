@@ -17,6 +17,7 @@ den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
   - Plus Boni für Scheckheft, 1. Hand, Facelift, Wenig KM
   - Suchanzeigen und nicht erklärte Platzhalterpreise unter 8.000 € kommen nicht in Top-Listen
   - Ein ausdrücklich genannter Preis in der Beschreibung ersetzt für das Ranking einen Platzhalterpreis
+  - Die Detailseiten der Ranking-Kandidaten werden geprüft; entfernte Anzeigen werden übersprungen
 - Oben erscheinen die Top 3 der neuen Angebote als große Cards mit Online-Datum.
 - Unten stehen die persistent gespeicherten All-Time-Top-3; weitere neue Angebote
   werden dazwischen als kompakte Tabelle angezeigt.

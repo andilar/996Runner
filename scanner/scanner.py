@@ -10,6 +10,7 @@ import re
 import math
 import smtplib
 import time
+import urllib.error
 import urllib.request
 from urllib.parse import urljoin
 from pathlib import Path
@@ -205,6 +206,15 @@ DESCRIPTION_PRICE_RE = re.compile(
     re.I,
 )
 
+UNAVAILABLE_PAGE_PATTERNS = (
+    re.compile(r"diese\s+anzeige\s+ist(?:\s+leider)?\s+nicht\s+mehr\s+verfügbar", re.I),
+    re.compile(r"anzeige\s+wurde\s+(?:gelöscht|deaktiviert)", re.I),
+    re.compile(r"<title[^>]*>[^<]*(?:nicht\s+mehr\s+verfügbar|gelöscht)", re.I),
+)
+
+AVAILABILITY_TIMEOUT_SECONDS = 10
+AVAILABILITY_BODY_LIMIT = 512_000
+
 
 def _description_price_eur(description: str) -> int | None:
     """Liest einen ausdrücklich benannten Kaufpreis aus der Beschreibung."""
@@ -224,6 +234,9 @@ def ranking_price_eur(listing: dict) -> int | None:
 
 def is_rankable_listing(listing: dict) -> bool:
     """Lässt nur Verkaufsangebote ohne ungeklärten Platzhalterpreis ins Ranking."""
+    if listing.get("_ranking_unavailable"):
+        return False
+
     title = listing.get("title", "") or ""
     if any(pattern.search(title) for pattern in WANTED_TITLE_PATTERNS):
         return False
@@ -241,6 +254,59 @@ def _ranking_price_display(listing: dict) -> str:
         corrected = f"{ranked:,}".replace(",", ".")
         return f"{corrected} €*"
     return original
+
+
+def check_listing_availability(
+    listing: dict, opener=urllib.request.urlopen
+) -> bool | None:
+    """Prüft eine Detailseite; ``None`` bedeutet vorübergehend nicht prüfbar."""
+    url = listing.get("url", "")
+    if not re.match(r"^https?://", url, re.I):
+        return False
+
+    request = urllib.request.Request(url, headers=HEADERS)
+    try:
+        with opener(request, timeout=AVAILABILITY_TIMEOUT_SECONDS) as response:
+            status = getattr(response, "status", None) or response.getcode()
+            body = response.read(AVAILABILITY_BODY_LIMIT).decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as error:
+        if error.code in (404, 410):
+            return False
+        return None
+    except OSError:
+        return None
+
+    if status in (404, 410):
+        return False
+    if not body:
+        return None
+    if any(pattern.search(unescape(body)) for pattern in UNAVAILABLE_PAGE_PATTERNS):
+        return False
+    return True
+
+
+def select_available_ranked_listings(
+    listings: list[dict], limit: int = 3, availability_fn=check_listing_availability
+) -> list[dict]:
+    """Wählt Ranking-Kandidaten und überspringt sicher nicht mehr verfügbare Seiten."""
+    ranked = sorted(
+        (listing for listing in listings if is_rankable_listing(listing)),
+        key=lambda listing: compute_score(listing)[0],
+        reverse=True,
+    )
+    selected = []
+    for listing in ranked:
+        status = availability_fn(listing)
+        if status is False:
+            listing["_ranking_unavailable"] = True
+            print(f"  Nicht mehr verfügbar, aus Top-Liste entfernt: {listing.get('title', '')}")
+            continue
+        if status is None:
+            print(f"  Verfügbarkeit nicht prüfbar, Angebot bleibt erhalten: {listing.get('title', '')}")
+        selected.append(listing)
+        if len(selected) == limit:
+            break
+    return selected
 
 
 # ─── Score-Berechnung ─────────────────────────────────────────────────────────
@@ -615,12 +681,14 @@ def load_all_time_favorites() -> list[dict]:
 
 
 def update_all_time_favorites(
-    favorites: list[dict], current_listings: list[dict]
+    favorites: list[dict], current_listings: list[dict], availability_fn=None
 ) -> list[dict]:
     """Merge current findings into the persistent all-time top three."""
     by_id = {listing["id"]: listing for listing in favorites}
     by_id.update({listing["id"]: listing for listing in current_listings})
     candidates = [listing for listing in by_id.values() if is_rankable_listing(listing)]
+    if availability_fn is not None:
+        return select_available_ranked_listings(candidates, 3, availability_fn)
     ranked = sorted(candidates, key=lambda listing: compute_score(listing)[0], reverse=True)
     return ranked[:3]
 
@@ -907,7 +975,20 @@ def main():
     new  = find_new(listings, seen)
     print(f"  {len(new)} davon neu")
 
-    favorites = update_all_time_favorites(load_all_time_favorites(), listings)
+    availability_cache: dict[str, bool | None] = {}
+
+    def cached_availability(listing: dict) -> bool | None:
+        listing_id = str(listing.get("id", ""))
+        if listing_id not in availability_cache:
+            availability_cache[listing_id] = check_listing_availability(listing)
+        return availability_cache[listing_id]
+
+    # Neue Top-Kandidaten sowie die persistenten All-Time-Favoriten prüfen.
+    # Sicher entfernte Treffer werden markiert und von build_html übersprungen.
+    select_available_ranked_listings(new, 3, cached_availability)
+    favorites = update_all_time_favorites(
+        load_all_time_favorites(), listings, cached_availability
+    )
 
     subject = (
         f"🏎 996 Scanner: {len(new)} neue Angebote – {date.today():%d.%m.%Y}"

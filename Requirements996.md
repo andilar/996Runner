@@ -161,6 +161,8 @@ Für die Qualität der Top-Listen gelten zusätzlich folgende Regeln:
 - Anzeigenpreise unter 8.000 EUR gelten als unplausible Platzhalterpreise.
 - Nennt die Beschreibung ausdrücklich einen plausiblen Kaufpreis, wird dieser für das Ranking verwendet und in der Ausgabe gekennzeichnet.
 - Ein unplausibler Anzeigenpreis ohne korrigierbaren Beschreibungspreis schließt das Angebot aus den Top-Listen aus; in der vollständigen Liste bleibt es sichtbar.
+- Vor der Auswahl der Top 3 wird die jeweilige Detailseite auf Verfügbarkeit geprüft. Eindeutig entfernte Anzeigen werden übersprungen, bis bis zu drei verfügbare Kandidaten gefunden sind.
+- Nicht eindeutige Netzwerk-, TLS-, Server- oder Rate-Limit-Fehler dürfen ein Angebot nicht dauerhaft aus den Favoriten entfernen.
 
 ## 7. Zustandsverwaltung
 
