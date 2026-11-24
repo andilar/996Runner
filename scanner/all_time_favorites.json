@@ -1,19 +1,5 @@
 [
   {
-    "id": "3531861510",
-    "title": "Porsche 996 4S / Klappe, Manual, Schiebdach, 9FF Austauschmotor",
-    "price": "996 € VB",
-    "location": "58454 Witten",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-4s-klappe-manual-schiebdach-9ff-austauschmotor/3531861510-216-1021",
-    "date": "05.10.2026",
-    "km": "76.000 km",
-    "year": "2004",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/ef9b42f4-ac62-4022-949a-e847abe6f236?rule=$_59.AUTO",
-    "desc": "Preis 45599 VB im vernünftigen Rahmen.\n\nAlle Infos hier:\n\nhttps://www.elferspot.com/de/fahrzeug/porsche-996-2-carrera-4s-2005-6244639/\n\nBei Fragen gene melden.\n\nDas Fahrzeug im Detail\nZum Verkauf steht mein gepflegter Porsche 911 Carrera 4S der Ba...",
-    "plz": "58454",
-    "distance_km": 245
-  },
-  {
     "id": "3526106639",
     "title": "Porsche 996.2 mit ATM",
     "price": "24.000 €",
@@ -28,17 +14,31 @@
     "distance_km": 132
   },
   {
-    "id": "3543489747",
-    "title": "Suche Porsche 911 Carrera 996 Coupé",
-    "price": "29.999 € VB",
-    "location": "49356 Diepholz",
-    "url": "https://www.kleinanzeigen.de/s-anzeige/suche-porsche-911-carrera-996-coup-/3543489747-216-2612",
-    "date": "Gestern",
-    "km": "150.000 km",
-    "year": "2001",
-    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a2/a2532325-0cbb-4c2c-9b74-50873bec0872?rule=$_59.AUTO",
-    "desc": "Suche ein 996 Coupé, gern ältere Modelle oder auch Facelift anbieten.\nWichtig: kein Cabrio, nicht schwarz.\nBestenfalls deutsche Auslieferung und wenig KM oder dokumentierte Motorrevision.\nRaum Bremen/Osnabrück.",
-    "plz": "49356",
-    "distance_km": 174
+    "id": "3531861510",
+    "title": "Porsche 996 4S / Klappe, Manual, Schiebdach, 9FF Austauschmotor",
+    "price": "996 € VB",
+    "location": "58454 Witten",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-996-4s-klappe-manual-schiebdach-9ff-austauschmotor/3531861510-216-1021",
+    "date": "05.10.2026",
+    "km": "76.000 km",
+    "year": "2004",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/ef9b42f4-ac62-4022-949a-e847abe6f236?rule=$_59.AUTO",
+    "desc": "Preis 45599 VB im vernünftigen Rahmen.\n\nAlle Infos hier:\n\nhttps://www.elferspot.com/de/fahrzeug/porsche-996-2-carrera-4s-2005-6244639/\n\nBei Fragen gene melden.\n\nDas Fahrzeug im Detail\nZum Verkauf steht mein gepflegter Porsche 911 Carrera 4S der Ba...",
+    "plz": "58454",
+    "distance_km": 245
+  },
+  {
+    "id": "3450676997",
+    "title": "Porsche 911/996 Cabrio/ Motorrevision von Car Design Prüfer",
+    "price": "28.900 € VB",
+    "location": "79098 Altstadt",
+    "url": "https://www.kleinanzeigen.de/s-anzeige/porsche-911-996-cabrio-motorrevision-von-car-design-pruefer/3450676997-216-9355",
+    "date": "04.07.2026",
+    "km": "199.000 km",
+    "year": "1998",
+    "image": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/53/53b42342-935f-46d6-91e2-d4cc74968ad0?rule=$_59.AUTO",
+    "desc": "Bitte diese Anzeige sorgfältig lesen. Anfragen wie ‚was ist letzter Preis’ oder unverschämte Angebote werden nicht beantwortet.\n\nBitte keine Probefahrt Touristen, die habe ich genug gehabt.\nIch verkaufe mein Porsche 911 Cabrio, BJ 03/1998, EZ 08/1...",
+    "plz": "79098",
+    "distance_km": 530
   }
 ]
