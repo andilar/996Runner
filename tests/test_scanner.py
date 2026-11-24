@@ -352,6 +352,28 @@ class ListingParserTest(unittest.TestCase):
             self.assertEqual(data["price_changes"][0]["current_price"], 18000)
             self.assertIn("Porsche 996", page.read_text(encoding="utf-8"))
 
+    def test_generated_dashboard_has_sortable_price_changes_table(self):
+        with TemporaryDirectory() as directory:
+            database = Path(directory) / "market.sqlite"
+            page = Path(directory) / "index.html"
+
+            generate_dashboard(database, page)
+            html = page.read_text(encoding="utf-8")
+
+            self.assertIn('id="price-changes-table"', html)
+            for key in (
+                "scanned_at",
+                "title",
+                "previous_price",
+                "current_price",
+                "delta",
+            ):
+                self.assertIn(f'data-sort-key="{key}"', html)
+            self.assertIn("const PriceChangesTable=(()=>", html)
+            self.assertIn("function sortRows(rows,state)", html)
+            self.assertIn("delta:'asc'", html)
+            self.assertIn("setAttribute('aria-sort'", html)
+
 
 if __name__ == "__main__":
     unittest.main()

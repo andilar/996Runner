@@ -59,6 +59,11 @@
     td { color:#b9bbb7; }
     tr:hover td { background:rgba(239,48,47,.045); color:var(--white); }
     td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .sort-button { width:100%; display:inline-flex; align-items:center; gap:6px; padding:0; border:0; color:inherit; background:none; font:inherit; letter-spacing:inherit; text-transform:inherit; text-align:inherit; cursor:pointer; }
+    th.num .sort-button { justify-content:flex-end; }
+    .sort-button:hover { color:var(--white); }
+    .sort-button:focus-visible { outline:1px solid var(--cyan); outline-offset:4px; }
+    .sort-indicator { width:9px; color:var(--cyan); text-align:center; }
     a { color:var(--white); text-decoration:none; border-bottom:1px solid var(--red-dim); }
     a:hover { color:var(--red); border-color:var(--red); }
     footer { display:grid; grid-template-columns:1fr auto; gap:20px; margin-top:18px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:8px; line-height:1.65; letter-spacing:.04em; text-transform:uppercase; }
@@ -86,7 +91,13 @@
   </div>
   <section class="changes-panel">
     <div class="panel-head"><h2>Letzte Preisänderungen</h2><span class="channel">EVENT.LOG // 050</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Fahrzeug</th><th class="num">Vorher</th><th class="num">Aktuell</th><th class="num">Delta</th></tr></thead><tbody id="changes"></tbody></table></div>
+    <div class="table-wrap"><table id="price-changes-table"><thead><tr>
+      <th data-sort-key="scanned_at"><button class="sort-button" type="button">Zeitpunkt <span class="sort-indicator" aria-hidden="true"></span></button></th>
+      <th data-sort-key="title"><button class="sort-button" type="button">Fahrzeug <span class="sort-indicator" aria-hidden="true"></span></button></th>
+      <th class="num" data-sort-key="previous_price"><button class="sort-button" type="button">Vorher <span class="sort-indicator" aria-hidden="true"></span></button></th>
+      <th class="num" data-sort-key="current_price"><button class="sort-button" type="button">Aktuell <span class="sort-indicator" aria-hidden="true"></span></button></th>
+      <th class="num" data-sort-key="delta"><button class="sort-button" type="button">Delta <span class="sort-indicator" aria-hidden="true"></span></button></th>
+    </tr></thead><tbody id="changes"></tbody></table></div>
     <p class="empty" id="no-changes">Keine Preisänderungen im Datensatz.</p>
   </section>
   <footer><span>Basis: öffentlich sichtbare Angebotspreise der konfigurierten Kleinanzeigen-Suche. Angebotspreise sind keine Verkaufspreise. Dubletten, fehlerhafte Anzeigen und Bestandsänderungen können die Statistik beeinflussen.</span><strong>996.RUNNER // MARKET SYS</strong></footer>
@@ -126,13 +137,117 @@ function chart(id,key,format,kind){
 }
 chart('price-chart','median_price_eur',v=>`${Math.round(v/1000)} T€`,'price');
 chart('inventory-chart','listing_count',v=>Math.round(v),'inventory');
-const tbody=document.getElementById('changes');
-for(const c of data.price_changes){const delta=c.current_price-c.previous_price,tr=document.createElement('tr');
-  const date=document.createElement('td');date.textContent=when(c.scanned_at);tr.append(date);
-  const car=document.createElement('td'),a=document.createElement('a');a.href=c.url;a.textContent=c.title;a.rel='noopener';car.append(a);tr.append(car);
-  for(const value of [euro(c.previous_price),euro(c.current_price),(delta>0?'+':'')+euro(delta)]){const td=document.createElement('td');td.className='num';td.textContent=value;tr.append(td);}tbody.append(tr);
-}
-if(data.price_changes.length)document.getElementById('no-changes').hidden=true;
+
+// Eigenständiges Tabellenmodul: Sortierlogik, Darstellung und DOM-Interaktion
+// bleiben von Datenabruf, Kennzahlen und Chart-Rendering getrennt.
+const PriceChangesTable=(()=>{
+  const INITIAL_SORT={key:'scanned_at',direction:'desc'};
+  const INITIAL_DIRECTIONS={
+    scanned_at:'desc',title:'asc',previous_price:'desc',current_price:'desc',delta:'asc'
+  };
+  const ACCESSORS={
+    scanned_at:row=>Date.parse(row.scanned_at),
+    title:row=>row.title,
+    previous_price:row=>row.previous_price,
+    current_price:row=>row.current_price,
+    delta:row=>row.delta,
+  };
+
+  function prepareRows(changes){
+    return changes.map(change=>({
+      ...change,
+      delta:change.current_price-change.previous_price,
+    }));
+  }
+
+  function compareValues(left,right){
+    if(typeof left==='string')return left.localeCompare(right,'de',{sensitivity:'base'});
+    return left-right;
+  }
+
+  function sortRows(rows,state){
+    const accessor=ACCESSORS[state.key],factor=state.direction==='asc'?1:-1;
+    return [...rows].sort((left,right)=>{
+      const primary=factor*compareValues(accessor(left),accessor(right));
+      if(primary!==0)return primary;
+      return Date.parse(right.scanned_at)-Date.parse(left.scanned_at);
+    });
+  }
+
+  function nextSortState(current,key){
+    if(current.key===key){
+      return {key,direction:current.direction==='asc'?'desc':'asc'};
+    }
+    return {key,direction:INITIAL_DIRECTIONS[key]};
+  }
+
+  function appendNumericCell(row,value){
+    const cell=document.createElement('td');
+    cell.className='num';
+    cell.textContent=value;
+    row.append(cell);
+  }
+
+  function createRow(change){
+    const row=document.createElement('tr');
+    const date=document.createElement('td');
+    date.textContent=when(change.scanned_at);
+    row.append(date);
+
+    const car=document.createElement('td'),link=document.createElement('a');
+    link.href=change.url;
+    link.textContent=change.title;
+    link.rel='noopener noreferrer';
+    car.append(link);
+    row.append(car);
+
+    appendNumericCell(row,euro(change.previous_price));
+    appendNumericCell(row,euro(change.current_price));
+    appendNumericCell(row,(change.delta>0?'+':'')+euro(change.delta));
+    return row;
+  }
+
+  function renderRows(body,rows,state){
+    const fragment=document.createDocumentFragment();
+    for(const change of sortRows(rows,state))fragment.append(createRow(change));
+    body.replaceChildren(fragment);
+  }
+
+  function updateHeaders(headers,state){
+    for(const header of headers){
+      const active=header.dataset.sortKey===state.key;
+      header.setAttribute('aria-sort',active?(state.direction==='asc'?'ascending':'descending'):'none');
+      header.querySelector('.sort-indicator').textContent=active?(state.direction==='asc'?'▲':'▼'):'';
+    }
+  }
+
+  function init(changes){
+    const table=document.getElementById('price-changes-table');
+    const body=document.getElementById('changes');
+    const empty=document.getElementById('no-changes');
+    const headers=[...table.querySelectorAll('th[data-sort-key]')];
+    const rows=prepareRows(changes);
+    let state={...INITIAL_SORT};
+
+    function render(){
+      renderRows(body,rows,state);
+      updateHeaders(headers,state);
+      empty.hidden=rows.length>0;
+    }
+
+    for(const header of headers){
+      header.querySelector('button').addEventListener('click',()=>{
+        state=nextSortState(state,header.dataset.sortKey);
+        render();
+      });
+    }
+    render();
+  }
+
+  return {init,prepareRows,sortRows,nextSortState};
+})();
+
+PriceChangesTable.init(data.price_changes);
 </script>
 </body>
 </html>
