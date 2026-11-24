@@ -13,6 +13,7 @@ from scanner.scanner import (
     deduplicate_listings,
     detect_highlights,
     is_rankable_listing,
+    prepare_dashboard_rankings,
     ranking_price_eur,
     save_seen_ids,
     select_available_ranked_listings,
@@ -166,6 +167,25 @@ class ListingParserTest(unittest.TestCase):
 
         self.assertEqual(favorites[0]["id"], "old")
         self.assertEqual({item["id"] for item in favorites}, {"old", "new"})
+
+    def test_prepares_ranked_dashboard_view_model_and_excludes_wanted_ads(self):
+        candidates = [
+            make_listing("top", "Porsche mit Motorrevision", "8.000 €", "Heute"),
+            make_listing("second", "Porsche in Vesuvio", "20.000 €", "Gestern"),
+            make_listing("third", "Porsche 996 Carrera", "10.000 €", "01.09.2026"),
+            make_listing("fourth", "Porsche 996 Carrera 4", "35.000 €", "02.09.2026"),
+            make_listing(
+                "wanted", "Suche Porsche 996 mit Motorrevision", "8.000 €", "Heute"
+            ),
+        ]
+
+        rankings = prepare_dashboard_rankings(candidates)
+
+        self.assertEqual([item["rank"] for item in rankings], [1, 2, 3])
+        self.assertEqual([item["id"] for item in rankings], ["top", "second", "third"])
+        self.assertGreater(rankings[0]["score"], rankings[1]["score"])
+        self.assertIn("Motorrevision", rankings[0]["highlights"])
+        self.assertNotIn("wanted", {item["id"] for item in rankings})
 
     def test_placeholder_price_uses_explicit_description_price(self):
         listing = make_listing(
@@ -360,14 +380,16 @@ class ListingParserTest(unittest.TestCase):
             latest = record_market_snapshot(
                 database, second, compute_score, datetime(2026, 9, 23, tzinfo=timezone.utc)
             )
-            generate_dashboard(database, page)
-            data = dashboard_data(database)
+            rankings = prepare_dashboard_rankings(second)
+            generate_dashboard(database, page, rankings)
+            data = dashboard_data(database, rankings)
 
             self.assertEqual(initial["median_price_eur"], 25000)
             self.assertEqual(latest["new_count"], 1)
             self.assertEqual(latest["removed_count"], 1)
             self.assertEqual(latest["price_down_count"], 1)
             self.assertEqual(data["price_changes"][0]["current_price"], 18000)
+            self.assertEqual(data["top_rankings"][0]["rank"], 1)
             self.assertIn("Porsche 996", page.read_text(encoding="utf-8"))
 
     def test_generated_dashboard_has_sortable_price_changes_table(self):
@@ -388,6 +410,9 @@ class ListingParserTest(unittest.TestCase):
             ):
                 self.assertIn(f'data-sort-key="{key}"', html)
             self.assertIn("const PriceChangesTable=(()=>", html)
+            self.assertIn('id="top-rankings"', html)
+            self.assertIn("const TopRankings=(()=>", html)
+            self.assertIn("TopRankings.init(data.top_rankings??[])", html)
             self.assertIn("function sortRows(rows,state)", html)
             self.assertIn("delta:'asc'", html)
             self.assertIn("setAttribute('aria-sort'", html)

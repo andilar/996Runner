@@ -186,7 +186,9 @@ def record_market_snapshot(
     return metrics
 
 
-def dashboard_data(database_path: str | Path) -> dict:
+def dashboard_data(
+    database_path: str | Path, top_rankings: Iterable[dict] = ()
+) -> dict:
     initialize_database(database_path)
     with closing(sqlite3.connect(database_path)) as connection:
         connection.row_factory = sqlite3.Row
@@ -220,11 +222,21 @@ def dashboard_data(database_path: str | Path) -> dict:
                 """
             )
         ]
-    return {"scans": scans, "price_changes": changes}
+    return {
+        "scans": scans,
+        "price_changes": changes,
+        "top_rankings": list(top_rankings)[:3],
+    }
 
 
-def generate_dashboard(database_path: str | Path, output_path: str | Path) -> None:
-    data = json.dumps(dashboard_data(database_path), ensure_ascii=False).replace("</", "<\\/")
+def generate_dashboard(
+    database_path: str | Path,
+    output_path: str | Path,
+    top_rankings: Iterable[dict] = (),
+) -> None:
+    data = json.dumps(
+        dashboard_data(database_path, top_rankings), ensure_ascii=False
+    ).replace("</", "<\\/")
     template = Path(__file__).with_name("dashboard_template.html").read_text(encoding="utf-8")
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)

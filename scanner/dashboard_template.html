@@ -27,13 +27,13 @@
     .metrics { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid var(--dim); }
     .metric { min-width:0; padding:18px 20px 17px; border-right:1px solid var(--line); position:relative; background:linear-gradient(180deg,rgba(255,255,255,.018),transparent); }
     .metric:last-child { border-right:0; }
-    .metric::before,.panel::before,.changes-panel::before { content:""; position:absolute; top:6px; left:6px; width:8px; height:8px; border-left:1px solid var(--red); border-top:1px solid var(--red); }
+    .metric::before,.panel::before,.ranking-panel::before,.changes-panel::before { content:""; position:absolute; top:6px; left:6px; width:8px; height:8px; border-left:1px solid var(--red); border-top:1px solid var(--red); }
     .metric span { display:block; color:var(--muted); font-size:8px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
     .metric strong { display:block; color:var(--white); font-size:clamp(1.25rem,2.7vw,2.35rem); line-height:1; font-weight:400; letter-spacing:-.06em; font-variant-numeric:tabular-nums; }
     .metric small { display:block; color:var(--amber); font-size:8px; letter-spacing:.05em; margin-top:9px; text-transform:uppercase; }
     .telemetry { display:grid; grid-template-columns:minmax(0,2fr) minmax(280px,1fr); gap:14px; padding:14px 0; }
-    .panel,.changes-panel { position:relative; border:1px solid var(--dim); background:rgba(20,23,25,.92); padding:16px; overflow:hidden; }
-    .panel::after,.changes-panel::after { content:""; position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-right:1px solid var(--amber); border-bottom:1px solid var(--amber); }
+    .panel,.ranking-panel,.changes-panel { position:relative; border:1px solid var(--dim); background:rgba(20,23,25,.92); padding:16px; overflow:hidden; }
+    .panel::after,.ranking-panel::after,.changes-panel::after { content:""; position:absolute; right:6px; bottom:6px; width:8px; height:8px; border-right:1px solid var(--amber); border-bottom:1px solid var(--amber); }
     .panel-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding-bottom:11px; border-bottom:1px solid var(--line); }
     h2 { margin:0; color:var(--ink); font-size:9px; font-weight:500; letter-spacing:.13em; text-transform:uppercase; }
     .channel { color:var(--red); font-size:8px; letter-spacing:.1em; }
@@ -51,6 +51,23 @@
     .point { fill:var(--chart); stroke:var(--red); stroke-width:2.25; }
     .tick-mark { stroke:var(--amber); stroke-width:1; opacity:.65; }
     .empty { color:var(--muted); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:44px 8px; }
+    .ranking-panel { margin-top:14px; }
+    .ranking-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
+    .ranking-card { min-width:0; border:1px solid var(--line); background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 55%),var(--chart); }
+    .ranking-image-link { display:block; border:0; background:#0e1112; aspect-ratio:16/9; overflow:hidden; }
+    .ranking-image { width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s ease; }
+    .ranking-image-link:hover .ranking-image { transform:scale(1.025); }
+    .ranking-image-placeholder { height:100%; display:grid; place-items:center; color:var(--dim); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+    .ranking-content { padding:13px; }
+    .ranking-status { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; color:var(--amber); font-size:8px; letter-spacing:.1em; text-transform:uppercase; }
+    .ranking-card[data-rank="1"] .ranking-status { color:var(--amber); }
+    .ranking-card[data-rank="2"] .ranking-status { color:var(--cyan); }
+    .ranking-card[data-rank="3"] .ranking-status { color:var(--red); }
+    .ranking-title { display:block; min-height:2.7em; border:0; font-size:13px; font-weight:600; line-height:1.35; }
+    .ranking-price { margin-top:13px; color:var(--white); font-size:20px; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+    .ranking-meta { margin-top:8px; color:var(--muted); font-size:9px; line-height:1.7; white-space:pre-line; }
+    .ranking-badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:11px; }
+    .ranking-badge { padding:3px 6px; border:1px solid var(--amber-dim); color:var(--amber); font-size:7px; letter-spacing:.08em; text-transform:uppercase; }
     .changes-panel { margin-top:0; }
     .table-wrap { overflow-x:auto; margin-top:8px; }
     table { width:100%; border-collapse:collapse; font-size:10px; }
@@ -68,7 +85,7 @@
     a:hover { color:var(--red); border-color:var(--red); }
     footer { display:grid; grid-template-columns:1fr auto; gap:20px; margin-top:18px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:8px; line-height:1.65; letter-spacing:.04em; text-transform:uppercase; }
     footer strong { color:var(--amber); font-weight:400; white-space:nowrap; }
-    @media(max-width:760px) { main { width:min(100% - 22px,1380px); padding-top:12px; } header { grid-template-columns:1fr; } .updated { text-align:left; } .metrics { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2) { border-right:0; } .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); } .telemetry { grid-template-columns:1fr; } svg { height:270px; } footer { grid-template-columns:1fr; } }
+    @media(max-width:760px) { main { width:min(100% - 22px,1380px); padding-top:12px; } header { grid-template-columns:1fr; } .updated { text-align:left; } .metrics { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2) { border-right:0; } .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); } .ranking-grid,.telemetry { grid-template-columns:1fr; } .ranking-title { min-height:0; } svg { height:270px; } footer { grid-template-columns:1fr; } }
     @media(max-width:420px) { .system-bar span:nth-child(2) { display:none; } .metrics { grid-template-columns:1fr; } .metric { border-right:0; border-bottom:1px solid var(--line); } }
   </style>
 </head>
@@ -85,6 +102,11 @@
     <div class="metric"><span>FLOW.IO // Neu / entfernt</span><strong id="movement">–</strong><small>Seit vorherigem Scan</small></div>
     <div class="metric"><span>PRC.RNG // Preisspanne</span><strong id="range">–</strong><small id="priced">Angebote mit Preis</small></div>
   </div>
+  <section class="ranking-panel" aria-labelledby="top-rankings-title">
+    <div class="panel-head"><h2 id="top-rankings-title">Top 3 Angebote</h2><span class="channel">RANK.SYS // SCORE</span></div>
+    <div class="ranking-grid" id="top-rankings"></div>
+    <p class="empty" id="no-top-rankings">Noch keine verfügbaren Ranking-Angebote im Datensatz.</p>
+  </section>
   <div class="telemetry">
     <section class="panel"><div class="panel-head"><h2>Medianer Angebotspreis</h2><span class="channel">CH.01 // EUR</span></div><div class="chart-wrap"><svg id="price-chart" role="img" aria-label="Medianer Angebotspreis pro Scan"></svg></div></section>
     <section class="panel"><div class="panel-head"><h2>Online-Angebote</h2><span class="channel">CH.02 // COUNT</span></div><div class="chart-wrap"><svg id="inventory-chart" role="img" aria-label="Anzahl beobachteter Angebote pro Scan"></svg></div></section>
@@ -137,6 +159,90 @@ function chart(id,key,format,kind){
 }
 chart('price-chart','median_price_eur',v=>`${Math.round(v/1000)} T€`,'price');
 chart('inventory-chart','listing_count',v=>Math.round(v),'inventory');
+
+// Eigenständiges Ranking-Modul: Die vom Scanner geprüften Top-Angebote werden
+// ausschließlich als View-Model dargestellt; Auswahl und Scoring bleiben im Backend.
+const TopRankings=(()=>{
+  function textElement(tag,className,text){
+    const element=document.createElement(tag);
+    element.className=className;
+    element.textContent=text;
+    return element;
+  }
+
+  function listingLink(className,ranking){
+    const link=document.createElement('a');
+    link.className=className;
+    link.href=ranking.url;
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    return link;
+  }
+
+  function createMedia(ranking){
+    const link=listingLink('ranking-image-link',ranking);
+    if(ranking.image){
+      const image=document.createElement('img');
+      image.className='ranking-image';
+      image.src=ranking.image;
+      image.alt=ranking.title;
+      image.loading='lazy';
+      link.append(image);
+    }else{
+      link.append(textElement('span','ranking-image-placeholder','Kein Vorschaubild'));
+    }
+    return link;
+  }
+
+  function createCard(ranking){
+    const card=document.createElement('article');
+    card.className='ranking-card';
+    card.dataset.rank=ranking.rank;
+    card.append(createMedia(ranking));
+
+    const content=document.createElement('div');
+    content.className='ranking-content';
+    const status=document.createElement('div');
+    status.className='ranking-status';
+    status.append(
+      textElement('strong','',`#${ranking.rank}`),
+      textElement('span','',`Score ${Number(ranking.score).toLocaleString('de-DE',{maximumFractionDigits:1})}`),
+    );
+    content.append(status);
+
+    const title=listingLink('ranking-title',ranking);
+    title.textContent=ranking.title;
+    content.append(title,textElement('div','ranking-price',ranking.price));
+
+    const distance=ranking.distance_km==null?'':` // ${ranking.distance_km} km`;
+    const vehicle=[ranking.model_year,ranking.mileage].filter(value=>value&&value!=='–').join(' // ');
+    const meta=[vehicle,`${ranking.location}${distance}`,`Online seit ${ranking.online_since}`]
+      .filter(Boolean).join('\n');
+    content.append(textElement('div','ranking-meta',meta));
+
+    if(ranking.highlights.length){
+      const badges=document.createElement('div');
+      badges.className='ranking-badges';
+      for(const label of ranking.highlights)badges.append(textElement('span','ranking-badge',label));
+      content.append(badges);
+    }
+    card.append(content);
+    return card;
+  }
+
+  function init(rankings){
+    const container=document.getElementById('top-rankings');
+    const empty=document.getElementById('no-top-rankings');
+    const fragment=document.createDocumentFragment();
+    for(const ranking of rankings)fragment.append(createCard(ranking));
+    container.replaceChildren(fragment);
+    empty.hidden=rankings.length>0;
+  }
+
+  return {init};
+})();
+
+TopRankings.init(data.top_rankings??[]);
 
 // Eigenständiges Tabellenmodul: Sortierlogik, Darstellung und DOM-Interaktion
 // bleiben von Datenabruf, Kennzahlen und Chart-Rendering getrennt.

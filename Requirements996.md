@@ -261,6 +261,7 @@ Das responsive Dashboard zeigt:
 - aktuellen beobachteten Bestand
 - neue und entfernte Angebote
 - Preisspanne und Zahl der Angebote mit Preis
+- die verfügbarkeitsgeprüften All-Time-Top-3 mit Score und Link zur Anzeige
 - Zeitreihen für Medianpreis und Bestand
 - Tabelle der letzten Preisänderungen mit Links zu den Anzeigen
 - Hinweis, dass Angebotspreise keine Verkaufspreise sind und die Statistik durch Datenqualität beeinflusst werden kann

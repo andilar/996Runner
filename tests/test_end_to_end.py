@@ -163,7 +163,10 @@ class ScannerEndToEndTest(unittest.TestCase):
                     ).fetchone()[0]
                 self.assertEqual(scan, (4, 4))
                 self.assertEqual(observations, 4)
-                self.assertIn("Porsche 996", dashboard_file.read_text(encoding="utf-8"))
+                dashboard = dashboard_file.read_text(encoding="utf-8")
+                self.assertIn("Porsche 996", dashboard)
+                self.assertIn("Top 3 Angebote", dashboard)
+                self.assertIn('"top_rankings":', dashboard)
 
                 self.assertIn("/search?page=1", ScannerHandler.requested_paths)
                 self.assertIn("/search?page=2", ScannerHandler.requested_paths)

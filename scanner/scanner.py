@@ -774,6 +774,40 @@ def save_all_time_favorites(favorites: list[dict]):
         json.dump(favorites, f, ensure_ascii=False, indent=2)
 
 
+# ─── Dashboard-Ranking: View-Model ───────────────────────────────────────────────
+
+def prepare_dashboard_rankings(listings: list[dict]) -> list[dict]:
+    """Erzeugt das kompakte, JSON-fähige View-Model der verfügbaren Top 3."""
+    scored = [
+        (compute_score(listing)[0], listing)
+        for listing in listings
+        if is_rankable_listing(listing)
+    ]
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    rankings = []
+    for rank, (score, listing) in enumerate(scored[:3], start=1):
+        text = f"{listing.get('title', '')} {listing.get('desc', '')}"
+        rankings.append(
+            {
+                "rank": rank,
+                "id": str(listing.get("id", "")),
+                "title": listing.get("title", "") or "–",
+                "url": listing.get("url", ""),
+                "image": listing.get("image", ""),
+                "price": _ranking_price_display(listing),
+                "location": listing.get("location", "") or "–",
+                "online_since": listing.get("date", "") or "–",
+                "mileage": listing.get("km", "") or "–",
+                "model_year": listing.get("year", "") or "–",
+                "distance_km": listing.get("distance_km"),
+                "score": round(score, 1),
+                "highlights": [item["label"] for item in detect_highlights(text)],
+            }
+        )
+    return rankings
+
+
 # ─── E-Mail: HTML bauen ──────────────────────────────────────────────────────
 
 def _top_card(listing: dict, score: float, rank: int) -> str:
@@ -1078,7 +1112,9 @@ def main():
         save_seen_ids(all_ids)
         save_all_time_favorites(favorites)
         metrics = record_market_snapshot(DATABASE_FILE, listings, compute_score)
-        generate_dashboard(DATABASE_FILE, DASHBOARD_FILE)
+        generate_dashboard(
+            DATABASE_FILE, DASHBOARD_FILE, prepare_dashboard_rankings(favorites)
+        )
         print(
             "Marktdaten gespeichert: "
             f"{metrics['listing_count']} Angebote, "

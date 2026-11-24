@@ -6,7 +6,8 @@ Angeboten, weiteren Neuzugängen und den drei besten jemals gefundenen Angeboten
 
 Die öffentliche Marktübersicht unter
 https://andilar.github.io/996Runner/ zeigt den historischen Medianpreis,
-den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
+den beobachteten Bestand, die verfügbarkeitsgeprüften All-Time-Top-3 sowie
+Zu-, Abgänge und Preisänderungen.
 
 ## Wie es funktioniert
 
