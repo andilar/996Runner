@@ -10,6 +10,7 @@ from scanner.scanner import (
     build_html,
     check_listing_availability,
     compute_score,
+    deduplicate_listings,
     detect_highlights,
     is_rankable_listing,
     ranking_price_eur,
@@ -96,6 +97,23 @@ class ListingParserTest(unittest.TestCase):
 
         with self.assertRaisesRegex(RuntimeError, "State wird nicht aktualisiert"):
             _validate_listings(corrupt)
+
+    def test_deduplicates_listings_by_id_and_keeps_latest_data(self):
+        first = make_listing("same", "Erster Stand", "20.000 €", "Gestern")
+        other = make_listing("other", "Anderes Angebot", "25.000 €", "Heute")
+        latest = make_listing("same", "Aktueller Stand", "19.000 €", "Heute")
+
+        listings = deduplicate_listings([first, other, latest])
+
+        self.assertEqual([listing["id"] for listing in listings], ["same", "other"])
+        self.assertEqual(listings[0]["title"], "Aktueller Stand")
+        self.assertEqual(listings[0]["price"], "19.000 €")
+
+    def test_rejects_listing_without_stable_id_during_deduplication(self):
+        listing = make_listing("", "Porsche 996", "20.000 €", "Heute")
+
+        with self.assertRaisesRegex(RuntimeError, "ohne stabile ID"):
+            deduplicate_listings([listing])
 
     def test_email_always_shows_current_top_three_with_online_dates(self):
         findings = [

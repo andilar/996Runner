@@ -119,7 +119,9 @@ DEBUG=1 python3 scanner/scanner.py
 
 Der GitHub-Actions-Lauf führt zuerst die deterministischen Tests und danach den
 Live-Contract-Test aus. Bei einem Parserfehler wird das ausgelieferte HTML sieben
-Tage lang als Workflow-Artefakt `live-parser-failure-*` gespeichert.
+Tage lang als Workflow-Artefakt `live-parser-failure-*` gespeichert. Mehrfach
+ausgelieferte Treffer mit derselben Angebots-ID werden dabei wie im Produktivlauf
+dedupliziert und separat protokolliert.
 
 ## Anpassungen
 

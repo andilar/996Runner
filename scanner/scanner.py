@@ -600,8 +600,19 @@ class ListingParser(HTMLParser):
 
 # ─── Fetch ────────────────────────────────────────────────────────────────────
 
-def fetch_listings(url: str) -> list[dict]:
+def deduplicate_listings(listings: list[dict]) -> list[dict]:
+    """Dedupliziert Angebote anhand ihrer stabilen ID; der letzte Stand gewinnt."""
     listings_by_id: dict[str, dict] = {}
+    for listing in listings:
+        listing_id = str(listing.get("id", "")).strip()
+        if not listing_id:
+            raise RuntimeError("Angebot ohne stabile ID gefunden; Scan abgebrochen")
+        listings_by_id[listing_id] = listing
+    return list(listings_by_id.values())
+
+
+def fetch_listings(url: str) -> list[dict]:
+    parsed_listings: list[dict] = []
     visited_urls = set()
     next_url = url
     max_pages = MAX_RESULT_PAGES
@@ -624,13 +635,13 @@ def fetch_listings(url: str) -> list[dict]:
             print("  HTMLParser lieferte 0 Ergebnisse – Regex-Fallback...")
             page_listings = _regex_fallback(html)
         _validate_listings(page_listings)
-        listings_by_id.update({item["id"]: item for item in page_listings})
+        parsed_listings.extend(page_listings)
         next_url = urljoin(next_url, parser.next_href) if parser.next_href else ""
 
     if next_url and len(visited_urls) >= max_pages:
         raise RuntimeError(f"Mehr als {max_pages} Ergebnisseiten; Scan abgebrochen")
 
-    listings = list(listings_by_id.values())
+    listings = deduplicate_listings(parsed_listings)
 
     print(f"  Parser: {len(listings)} Angebote, "
           f"Titel: {sum(1 for l in listings if l['title'])}, "
