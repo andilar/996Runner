@@ -270,7 +270,9 @@ def check_listing_availability(
             status = getattr(response, "status", None) or response.getcode()
             body = response.read(AVAILABILITY_BODY_LIMIT).decode("utf-8", errors="replace")
     except urllib.error.HTTPError as error:
-        if error.code in (404, 410):
+        status = error.code
+        error.close()
+        if status in (404, 410):
             return False
         return None
     except OSError:

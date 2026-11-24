@@ -194,6 +194,7 @@ cython_debug/
 # Scanner runtime previews and SQLite sidecar files
 scanner/preview.html
 scanner/debug_fetch_page_*.html
+scanner/live_check_failure.html
 scanner/*.sqlite-shm
 scanner/*.sqlite-wal
 

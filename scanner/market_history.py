@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import statistics
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -71,7 +72,7 @@ def _mileage_km(value: str) -> int | None:
 def initialize_database(database_path: str | Path) -> None:
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection, connection:
         connection.executescript(SCHEMA)
 
 
@@ -88,7 +89,7 @@ def record_market_snapshot(
     timestamp_text = timestamp.replace(microsecond=0).isoformat().replace("+00:00", "Z")
     current = {str(item["id"]): item for item in listings}
 
-    with sqlite3.connect(path) as connection:
+    with closing(sqlite3.connect(path)) as connection, connection:
         connection.row_factory = sqlite3.Row
         previous_scan = connection.execute(
             "SELECT id FROM scans ORDER BY scanned_at DESC, id DESC LIMIT 1"
@@ -187,7 +188,7 @@ def record_market_snapshot(
 
 def dashboard_data(database_path: str | Path) -> dict:
     initialize_database(database_path)
-    with sqlite3.connect(database_path) as connection:
+    with closing(sqlite3.connect(database_path)) as connection:
         connection.row_factory = sqlite3.Row
         scans = [
             dict(row)

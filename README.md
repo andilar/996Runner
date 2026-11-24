@@ -96,6 +96,12 @@ auswählen. Jeder erfolgreiche Scan aktualisiert anschließend automatisch die
 ## Lokal testen
 
 ```bash
+# Deterministische Unit- und End-to-End-Tests
+python3 -m unittest discover -v
+
+# Optionaler Live-Contract-Test gegen das aktuelle Kleinanzeigen-Markup
+python3 -m unittest -v tests.live_scanner_check
+
 # Ohne E-Mail-Versand, schreibt nur scanner/preview.html und verändert keinen State
 python3 scanner/scanner.py
 
@@ -109,6 +115,10 @@ python3 scanner/scanner.py
 DEBUG=1 python3 scanner/scanner.py
 # → schreibt scanner/debug_last_fetch.html
 ```
+
+Der GitHub-Actions-Lauf führt zuerst die deterministischen Tests und danach den
+Live-Contract-Test aus. Bei einem Parserfehler wird das ausgelieferte HTML sieben
+Tage lang als Workflow-Artefakt `live-parser-failure-*` gespeichert.
 
 ## Anpassungen
 

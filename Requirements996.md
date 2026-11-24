@@ -309,6 +309,11 @@ Mindestens folgende automatisierte Tests müssen vorhanden sein:
 8. Seen-IDs werden deterministisch sortiert gespeichert.
 9. Zwei aufeinanderfolgende Snapshots liefern korrekte Mediane sowie Neu-, Abgangs- und Preisänderungszahlen.
 10. Das generierte Dashboard enthält die konfigurierten Projekt-/Suchtexte und eingebetteten Daten.
+11. Ein deterministischer End-to-End-Test prüft Abruf, Seitennavigation, Parsing, Ranking, Verfügbarkeitsprüfung, Mailinhalt, State, SQLite und Dashboard gemeinsam.
+12. Ein separater Live-Contract-Test prüft in GitHub Actions das aktuelle Suchseiten-Markup und seine Feldabdeckung, ohne E-Mail oder persistenten State zu verändern.
+
+Schlägt der Live-Contract-Test nach einem erfolgreichen HTTP-Abruf fehl, wird das
+empfangene HTML zeitlich begrenzt als Workflow-Artefakt zur Parserdiagnose gespeichert.
 
 Die Abnahme ist erfolgreich, wenn alle Tests bestehen, ein lokaler Lauf ohne Secrets ausschließlich eine HTML-Vorschau erzeugt und ein konfigurierter Workflow-Lauf Mail, State, Historie und Dashboard aktualisiert sowie das Dashboard veröffentlicht.
 
