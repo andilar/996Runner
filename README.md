@@ -13,7 +13,8 @@ den beobachteten Bestand sowie Zu-, Abgänge und Preisänderungen.
 - GitHub Actions führt das Script täglich aus (Standard: 07:00 UTC).
 - Der Scanner ruft die Suche auf und vergleicht mit `scanner/last_seen_ids.json`.
 - Alle aktuellen Angebote werden bewertet:
-  - **Motorrevision** (+100), **Preis** (+0..50), **Entfernung zu XXX Ort** (+0..30)
+  - **Motorrevision**, **Vesuvio** und **Stahlbuchsen** (je +100)
+  - **Preis** (+0..50) und **Entfernung zum Referenzort** (+0..30)
   - Plus Boni für Scheckheft, 1. Hand, Facelift, Wenig KM
   - Suchanzeigen und nicht erklärte Platzhalterpreise unter 8.000 € kommen nicht in Top-Listen
   - Ein ausdrücklich genannter Preis in der Beschreibung ersetzt für das Ranking einen Platzhalterpreis
@@ -122,13 +123,13 @@ Tage lang als Workflow-Artefakt `live-parser-failure-*` gespeichert.
 
 ## Anpassungen
 
-**Suche ändern:** `SEARCH_URL` oben im Script anpassen.
-Die URL einfach von Kleinanzeigen mit eingestellten Filtern kopieren.
+**Suche oder Datenquelle ändern:** `SEARCH_URL` und `BASE_URL` anpassen.
+Die Such-URL einfach mit den gewünschten Filtern aus der Datenquelle kopieren.
 
-**Heimat-PLZ ändern:** `HOME_PLZ` und `HOME_LAT_LON` anpassen.
+**Heimat-PLZ ändern:** `HOME_POSTAL_CODE` und `HOME_COORDINATES` anpassen.
 Koordinaten z.B. von https://www.openstreetmap.org ablesen.
 
-**Scoring-Gewichte ändern:** in `compute_score()` die drei Zahlen (100/50/30) anpassen.
+**Scoring-Gewichte ändern:** zentral in `SCORING_RULES` anpassen.
 
 **Scan-Zeitpunkt:** in `.github/workflows/scanner.yml` den `cron`-Ausdruck ändern.
 GitHub nutzt UTC – für 09:00 deutscher Zeit Sommerzeit `0 7 * * *`,

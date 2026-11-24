@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from scanner.scanner import (
     ListingParser,
@@ -9,6 +10,7 @@ from scanner.scanner import (
     build_html,
     check_listing_availability,
     compute_score,
+    detect_highlights,
     is_rankable_listing,
     ranking_price_eur,
     save_seen_ids,
@@ -163,6 +165,52 @@ class ListingParserTest(unittest.TestCase):
         self.assertEqual(breakdown["price"], 0)
         self.assertIn("45.599 €*", build_html([listing], [listing], []))
         self.assertGreaterEqual(score, 100)
+
+    def test_required_primary_highlights_are_detected_and_scored(self):
+        listing = make_listing(
+            "primary",
+            "Porsche 996 in Vesuvio Metallic",
+            "35.000 €",
+            "Heute",
+            "Motorrevision mit Stahlbuchsen, Farbcode L40X.",
+        )
+
+        score, breakdown = compute_score(listing)
+        labels = {highlight["label"] for highlight in detect_highlights(
+            f"{listing['title']} {listing['desc']}"
+        )}
+
+        self.assertTrue({"Motorrevision", "Vesuvio", "Stahlbuchsen"} <= labels)
+        self.assertEqual(
+            breakdown,
+            {"primary": 300, "price": 0, "distance": 0, "other": 0},
+        )
+        self.assertEqual(score, 300)
+
+    def test_scoring_rules_are_runtime_configurable(self):
+        listing = make_listing(
+            "configured", "Porsche 996", "35.000 €", "Heute", "Motorrevision"
+        )
+
+        with patch.dict(
+            scanner.SCORING_RULES["primary"], {"Motorrevision": 175}, clear=True
+        ):
+            score, breakdown = compute_score(listing)
+
+        self.assertEqual(breakdown["primary"], 175)
+        self.assertEqual(score, 175)
+
+    def test_relative_listing_urls_use_configured_base_url(self):
+        parser = ListingParser()
+        with patch.object(scanner, "BASE_URL", "https://market.example"):
+            parser.feed(
+                '<article data-adid="42" data-href="/s-anzeige/porsche/42">'
+                '<script type="application/ld+json">'
+                '{"@type":"ImageObject","title":"Porsche 996"}'
+                "</script></article>"
+            )
+
+        self.assertEqual(parser.listings[0]["url"], "https://market.example/s-anzeige/porsche/42")
 
     def test_unexplained_placeholder_price_is_not_ranked(self):
         placeholder = make_listing(

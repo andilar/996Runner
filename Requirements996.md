@@ -53,6 +53,7 @@ Mindestens folgende Werte müssen zentral und leicht änderbar sein:
 |---|---|
 | `SEARCH_URL` | Vollständige URL der gespeicherten Suche inklusive Filter |
 | `BASE_URL` | Domain der Datenquelle für relative Angebots-URLs |
+| `MAX_RESULT_PAGES` | Sicherheitslimit für die Seitennavigation |
 | `HOME_POSTAL_CODE` | Referenz-Postleitzahl für das Entfernungsranking |
 | `HOME_COORDINATES` | Breiten- und Längengrad des Referenzorts |
 | `HIGHLIGHT_GROUPS` | Labels, Farben und zugehörige Keywords |
@@ -131,6 +132,7 @@ Vor jeder Zustandsänderung muss die Ergebnisqualität geprüft werden:
 Die Referenzgruppen sind:
 
 - Stahlbuchsen
+- Vesuvio
 - Motorrevision
 - Scheckheft
 - Wenig Kilometer
@@ -143,15 +145,15 @@ Die Bewertungsfunktion muss einen Gesamtscore sowie eine Aufschlüsselung nach `
 
 Referenzlogik:
 
-- wichtigstes Keyword-Highlight: `+100`
+- Motorrevision: `+100`
+- Farbe Vesuvio: `+100`
+- Stahlbuchsen: `+100`
 - Preis: linear `0..50`; voller Bonus bis 8.000 EUR, kein Bonus ab 35.000 EUR
 - Entfernung: linear `0..30`; voller Bonus bis 50 km, kein Bonus ab 600 km
 - Scheckheft: `+15`
 - erste Hand: `+10`
 - Facelift: `+8`
 - wenig Kilometer: `+5`
-- Farbe Vesuvio: `+100`
-- Stahlbuchsen: `+100`
 
 Fehlende Preise oder Postleitzahlen dürfen den Lauf nicht verhindern; der jeweilige Teilscore beträgt dann null. Die Entfernung wird per Haversine-Formel aus der Referenzposition und groben Koordinaten der ersten zwei PLZ-Ziffern berechnet.
 

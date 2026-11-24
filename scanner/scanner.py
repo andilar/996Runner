@@ -30,6 +30,8 @@ except ImportError:  # Direct execution: python scanner/scanner.py
 SEARCH_URL = (
     "https://www.kleinanzeigen.de/s-autos/996/k0c216+autos.shift_s:manuell"
 )
+BASE_URL = "https://www.kleinanzeigen.de"
+MAX_RESULT_PAGES = 20
 
 HEADERS = {
     "User-Agent": (
@@ -56,13 +58,56 @@ GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER)
 DEBUG        = os.environ.get("DEBUG", "0") == "1"
 
-# Heimat-PLZ für Entfernungs-Ranking (Vordorf, Niedersachsen)
-HOME_PLZ      = "38533"
-HOME_LAT_LON  = (52.42, 10.60)
+# Heimatposition für Entfernungs-Ranking (Vordorf, Niedersachsen)
+HOME_POSTAL_CODE = "38533"
+HOME_COORDINATES = (52.42, 10.60)
+
+SCORING_RULES = {
+    "primary": {
+        "Motorrevision": 100,
+        "Vesuvio": 100,
+        "Stahlbuchsen": 100,
+    },
+    "price": {
+        "maximum_bonus": 50,
+        "full_bonus_until_eur": 8_000,
+        "zero_bonus_from_eur": 35_000,
+        "minimum_plausible_eur": 8_000,
+    },
+    "distance": {
+        "maximum_bonus": 30,
+        "full_bonus_until_km": 50,
+        "zero_bonus_from_km": 600,
+    },
+    "other": {
+        "Scheckheft": 15,
+        "1. Hand": 10,
+        "Facelift": 8,
+        "Wenig KM": 5,
+    },
+}
 
 # ─── Keywords ────────────────────────────────────────────────────────────────
 
 HIGHLIGHT_GROUPS = [
+    {
+        "label": "Stahlbuchsen",
+        "color": "#7A271A",
+        "bg": "#FCE8E6",
+        "keywords": [
+            "stahlbuchse", "stahlbuchsen", "stahl zylinder", "stahlzylinder",
+            "steel liner", "steel liners", "closed deck stahl",
+        ],
+    },
+    {
+        "label": "Vesuvio",
+        "color": "#4A4D52",
+        "bg": "#ECEDEF",
+        "keywords": [
+            "vesuvio", "vesuvio metallic", "vesuvio-metallic",
+            "vesuviometallic", "vesuvgrau", "l40x",
+        ],
+    },
     {
         "label": "Motorrevision",
         "color": "#185FA5",
@@ -178,7 +223,7 @@ def distance_from_home(plz: str) -> float | None:
     coords = PLZ_REGIONS.get(plz[:2])
     if not coords:
         return None
-    return haversine_km(HOME_LAT_LON, coords)
+    return haversine_km(HOME_COORDINATES, coords)
 
 
 # ─── Preis-Parsing ────────────────────────────────────────────────────────────
@@ -192,8 +237,6 @@ def parse_price(price_str: str) -> int | None:
         return None
     return int(m.group(1).replace(".", ""))
 
-
-MIN_PLAUSIBLE_PRICE_EUR = 8_000
 
 WANTED_TITLE_PATTERNS = (
     re.compile(r"^\s*(?:suche|gesucht|ankauf|kaufe|wir\s+suchen)\b", re.I),
@@ -224,12 +267,13 @@ def _description_price_eur(description: str) -> int | None:
 
 def ranking_price_eur(listing: dict) -> int | None:
     """Liefert einen plausiblen Preis und korrigiert offensichtliche Platzhalter."""
+    minimum = SCORING_RULES["price"]["minimum_plausible_eur"]
     advertised = parse_price(listing.get("price", ""))
-    if advertised is None or advertised >= MIN_PLAUSIBLE_PRICE_EUR:
+    if advertised is None or advertised >= minimum:
         return advertised
 
     described = _description_price_eur(listing.get("desc", ""))
-    return described if described is not None and described >= MIN_PLAUSIBLE_PRICE_EUR else None
+    return described if described is not None and described >= minimum else None
 
 
 def is_rankable_listing(listing: dict) -> bool:
@@ -313,10 +357,20 @@ def select_available_ranked_listings(
 
 # ─── Score-Berechnung ─────────────────────────────────────────────────────────
 
+def _linear_bonus(
+    value: float, full_until: float, zero_from: float, maximum: float
+) -> float:
+    if value <= full_until:
+        return maximum
+    if value >= zero_from:
+        return 0
+    return round(maximum * (zero_from - value) / (zero_from - full_until), 1)
+
+
 def compute_score(listing: dict) -> tuple[float, dict]:
     """
     Gewichtetes Ranking:
-      1. Motorrevision (am wichtigsten): +100
+      1. Primärmerkmale Motorrevision, Vesuvio und Stahlbuchsen: je +100
       2. Preis (mittel): niedriger Preis → Bonus bis +50
       3. Entfernung (niedriger): näher dran → Bonus bis +30
     Plus kleine Boni für andere Highlights.
@@ -324,28 +378,36 @@ def compute_score(listing: dict) -> tuple[float, dict]:
     text = f"{listing.get('title','')} {listing.get('desc','')}"
     labels = {h["label"] for h in detect_highlights(text)}
 
-    bd = {"motor": 0, "price": 0, "distance": 0, "other": 0}
+    bd = {"primary": 0, "price": 0, "distance": 0, "other": 0}
 
-    if "Motorrevision" in labels:
-        bd["motor"] = 100
+    for label, bonus in SCORING_RULES["primary"].items():
+        if label in labels:
+            bd["primary"] += bonus
 
     price = ranking_price_eur(listing)
     if price is not None:
-        if price <= 8000:     bd["price"] = 50
-        elif price >= 35000:  bd["price"] = 0
-        else:                 bd["price"] = round(50 * (35000 - price) / (35000 - 8000), 1)
+        rules = SCORING_RULES["price"]
+        bd["price"] = _linear_bonus(
+            price,
+            rules["full_bonus_until_eur"],
+            rules["zero_bonus_from_eur"],
+            rules["maximum_bonus"],
+        )
 
     dist = distance_from_home(listing.get("plz", ""))
     if dist is not None:
-        if dist <= 50:        bd["distance"] = 30
-        elif dist >= 600:     bd["distance"] = 0
-        else:                 bd["distance"] = round(30 * (600 - dist) / (600 - 50), 1)
+        rules = SCORING_RULES["distance"]
+        bd["distance"] = _linear_bonus(
+            dist,
+            rules["full_bonus_until_km"],
+            rules["zero_bonus_from_km"],
+            rules["maximum_bonus"],
+        )
         listing["distance_km"] = round(dist)
 
-    if "Scheckheft" in labels: bd["other"] += 15
-    if "1. Hand"    in labels: bd["other"] += 10
-    if "Facelift"   in labels: bd["other"] += 8
-    if "Wenig KM"   in labels: bd["other"] += 5
+    for label, bonus in SCORING_RULES["other"].items():
+        if label in labels:
+            bd["other"] += bonus
 
     return sum(bd.values()), bd
 
@@ -393,7 +455,7 @@ class ListingParser(HTMLParser):
             self._cur = {
                 "id": attrs["data-adid"],
                 "title": "", "price": "", "location": "",
-                "url": "https://www.kleinanzeigen.de" + href if href.startswith("/") else href,
+                "url": urljoin(BASE_URL, href) if href else "",
                 "date": "", "km": "", "year": "", "image": "",
                 "desc": "", "plz": "",
             }
@@ -438,7 +500,7 @@ class ListingParser(HTMLParser):
         if tag == "a":
             href = attrs.get("href", "")
             if href.startswith("/s-anzeige/") and not self._cur["url"]:
-                self._cur["url"] = "https://www.kleinanzeigen.de" + href
+                self._cur["url"] = urljoin(BASE_URL, href)
             if href.startswith("/s-anzeige/") and self._in_title_heading:
                 self._capture_title = True
             return
@@ -542,7 +604,7 @@ def fetch_listings(url: str) -> list[dict]:
     listings_by_id: dict[str, dict] = {}
     visited_urls = set()
     next_url = url
-    max_pages = 20
+    max_pages = MAX_RESULT_PAGES
 
     while next_url and next_url not in visited_urls and len(visited_urls) < max_pages:
         visited_urls.add(next_url)
@@ -622,7 +684,7 @@ def _regex_fallback(html: str) -> list[dict]:
     for m in re.finditer(r'data-adid="(\d+)"', html):
         adid = m.group(1)
         url_m = re.search(rf'href="(/s-anzeige/[^"]*{adid}[^"]*)"', html)
-        url   = ("https://www.kleinanzeigen.de" + url_m.group(1)) if url_m else ""
+        url   = urljoin(BASE_URL, url_m.group(1)) if url_m else ""
 
         title = ""
         if url_m:
@@ -848,7 +910,7 @@ def build_html(
           <h2 style="margin:0 0 14px;font-size:15px;color:#333;">
             🆕 Top 3 der neuen Angebote
             <span style="font-size:11px;color:#999;font-weight:400;margin-left:8px;">
-              Motorrevision · Preis · Entfernung zu 38533
+              Primärmerkmale · Preis · Entfernung zu {HOME_POSTAL_CODE}
             </span>
           </h2>
           {new_top_cards}
